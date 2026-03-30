@@ -1,0 +1,102 @@
+import type {
+  AddTapeBody,
+  AddTapeResponse,
+  CreateScenarioBody,
+  CreateScenarioResponse,
+  GetScenarioResponse,
+  ListScenariosResponse,
+} from './types'
+
+export class ApiError extends Error {
+  readonly code: string
+  readonly status: number
+
+  constructor(code: string, message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+    this.status = status
+  }
+}
+
+export function isSupabaseConfigured(): boolean {
+  const url = import.meta.env.VITE_SUPABASE_URL?.trim()
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
+  return Boolean(url && key)
+}
+
+function supabaseFunctionUrl(functionName: string): string {
+  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') ?? ''
+  return `${base}/functions/v1/${functionName}`
+}
+
+async function supabaseFetch(path: string, init: RequestInit): Promise<Response> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const headers = new Headers(init.headers)
+  if (!headers.has('Content-Type') && init.body) {
+    headers.set('Content-Type', 'application/json')
+  }
+  if (anon) {
+    headers.set('Authorization', `Bearer ${anon}`)
+    headers.set('apikey', anon)
+  }
+  return fetch(supabaseFunctionUrl(path), { ...init, headers })
+}
+
+async function parseJson<T>(res: Response): Promise<T> {
+  const text = await res.text()
+  let data: unknown
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    throw new ApiError('PARSE_ERROR', 'Invalid JSON response', res.status)
+  }
+  if (!res.ok) {
+    const err = (data as { error?: { code: string; message: string } })?.error
+    throw new ApiError(
+      err?.code ?? 'UNKNOWN',
+      err?.message ?? res.statusText,
+      res.status,
+    )
+  }
+  return data as T
+}
+
+export async function createScenario(
+  body: CreateScenarioBody,
+): Promise<CreateScenarioResponse> {
+  const res = await supabaseFetch('create-scenario', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<CreateScenarioResponse>(res)
+}
+
+export async function getScenarioBySlug(slug: string): Promise<GetScenarioResponse> {
+  const url = new URL(supabaseFunctionUrl('get-scenario-by-slug'))
+  url.searchParams.set('slug', slug)
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''}`,
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '',
+    },
+  })
+  return parseJson<GetScenarioResponse>(res)
+}
+
+export async function addTape(body: AddTapeBody): Promise<AddTapeResponse> {
+  const res = await supabaseFetch('add-tape', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<AddTapeResponse>(res)
+}
+
+export async function listScenarios(slugs: string[]): Promise<ListScenariosResponse> {
+  const res = await supabaseFetch('list-scenarios', {
+    method: 'POST',
+    body: JSON.stringify({ slugs }),
+  })
+  return parseJson<ListScenariosResponse>(res)
+}

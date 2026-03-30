@@ -1,0 +1,27 @@
+# Dependencies & build artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.vite/
+**/*.tsbuildinfo
+
+# Secrets — never commit (use .env.example as template)
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local cache
+supabase/.temp/
+supabase/.branches/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

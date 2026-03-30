@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caution Tape Generator — Design Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111111;
+    --surface: #1C1C1C;
+    --surface-raised: #252525;
+    --border: #2E2E2E;
+    --text: #F0F0F0;
+    --muted: #888888;
+    --accent: #FFD000;
+    --accent-text: #111111;
+  }
+
+  body {
+    background: #0A0A0A;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+
+  /* ─── Nav ─────────────────────────────────────── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #0A0A0A;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 52px;
+  }
+  .nav-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-right: 32px;
+    white-space: nowrap;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .nav-tab {
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ─── Layout ─────────────────────────────────── */
+  .directions-container {
+    display: none;
+    padding: 40px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .directions-container.active { display: block; }
+
+  .direction-header {
+    margin-bottom: 32px;
+  }
+  .direction-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .direction-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .direction-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 560px;
+  }
+
+  /* ─── Phone frame ────────────────────────────── */
+  .screens-row {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .screen-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .screen-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .phone {
+    width: 320px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════════
+     DIRECTION A — PURE WARNING
+     Absolute minimalism. CAUTION: is everything.
+  ═══════════════════════════════════════════════ */
+  .a-phone { height: 580px; }
+
+  .a-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: #111111;
+  }
+  .a-top-bar {
+    height: 2px;
+    background: var(--accent);
+  }
+  .a-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 48px 28px 28px;
+  }
+  .a-caution-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .a-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 32px;
+  }
+  .a-input-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    opacity: 0.4;
+  }
+  .a-cursor {
+    width: 2px;
+    height: 2.2rem;
+    background: var(--accent);
+    margin-left: 4px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .a-tape-preview {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  .a-tape-empty {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: #333;
+    text-transform: uppercase;
+  }
+  .a-footer {
+    padding: 16px 28px;
+    display: flex;
+    gap: 12px;
+  }
+  .a-btn-primary {
+    flex: 1;
+    height: 44px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .a-btn-ghost {
+    height: 44px;
+    padding: 0 16px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Tape render for A */
+  .tape-render {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  .tape-stripe-bg {
+    height: 72px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tape-stripes {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--tape-color, #FFD000) 0px,
+      var(--tape-color, #FFD000) 20px,
+      #111111 20px,
+      #111111 40px
+    );
+  }
+  .tape-text-row {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .tape-text-content {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.06em;
+    color: #111111;
+    text-shadow: none;
+    white-space: nowrap;
+  }
+
+
+  /* ══════════════════════════════════════════════
+     DIRECTION B — COMMAND CENTER
+     More structure. Feels like an official system.
+  ═══════════════════════════════════════════════ */
+  .b-phone { height: 580px; }
+  .b-screen {
+    height: 100%;
+    background: #0F0F0F;
+    display: flex;
+    flex-direction: column;
+  }
+  .b-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .b-wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+  .b-nav-link {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .b-body {
+    flex: 1;
+    padding: 24px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .b-field-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .b-input-block {
+    border: 1px solid #2A2A2A;
+    padding: 12px 14px;
+    background: #181818;
+  }
+  .b-caution-prefix {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    display: inline;
+  }
+  .b-input-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: #444;
+    letter-spacing: 0.06em;
+    display: inline;
+  }
+  .b-cursor-sm {
+    display: inline-block;
+    width: 2px;
+    height: 1rem;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+  .b-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .b-color-swatch {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border: 1px solid #333;
+  }
+  .b-color-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .b-preview-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .b-preview-box {
+    background: #181818;
+    border: 1px solid #2A2A2A;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+  }
+  .b-tape-mini .tape-stripe-bg { height: 56px; }
+  .b-tape-mini .tape-text-content { font-size: 1.2rem; }
+  .b-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #222;
+    display: flex;
+    gap: 10px;
+  }
+  .b-btn-primary {
+    flex: 1;
+    height: 40px;
+    background: var(--accent);
+    color: #111;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .b-btn-outline {
+    height: 40px;
+    padding: 0 14px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    border: 1px solid #2A2A2A;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ══════════════════════════════════════════════
+     DIRECTION C — BRUTALIST
+     Heavy, dense, tape-as-header, thick borders.
+  ═══════════════════════════════════════════════ */
+  .c-phone { height: 580px; }
+  .c-screen {
+    height: 100%;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+  }
+  .c-tape-header {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--accent) 0px,
+      var(--accent) 16px,
+      #111111 16px,
+      #111111 32px
+    );
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+  }
+  .c-tape-header-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    color: #111;
+    background: var(--accent);
+    padding: 2px 12px;
+  }
+  .c-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 20px 0;
+    gap: 0;
+  }
+  .c-section {
+    border: 1px solid #2A2A2A;
+    margin-bottom: -1px;
+  }
+  .c-section-header {
+    background: #1A1A1A;
+    padding: 8px 14px;
+    border-bottom: 1px solid #2A2A2A;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .c-section-body {
+    padding: 14px;
+  }
+  .c-caution-row {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .c-caution-yellow { color: var(--accent); }
+  .c-cursor-lg {
+    display: inline-block;
+    width: 3px;
+    height: 1.6rem;
+    background: var(--accent);
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+  .c-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #222;
+  }
+  .c-meta-item {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .c-meta-item span {
+    color: var(--accent);
+  }
+  .c-preview-tape { }
+  .c-preview-tape .tape-stripe-bg { height: 64px; }
+  .c-preview-tape .tape-text-content { font-size: 1.4rem; }
+  .c-footer {
+    padding: 16px 20px;
+    display: flex;
+    gap: 0;
+  }
+  .c-btn-primary {
+    flex: 1;
+    height: 48px;
+    background: var(--accent);
+    color: #111;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .c-btn-ghost {
+    height: 48px;
+    width: 48px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid #2A2A2A;
+    border-left: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  /* ══════════════════════════════════════════════
+     DIRECTION D — CINEMATIC
+     Tape is the hero. Maximum negative space.
+  ═══════════════════════════════════════════════ */
+  .d-phone { height: 580px; }
+  .d-screen {
+    height: 100%;
+    background: #0A0A0A;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .d-top {
+    padding: 32px 24px 0;
+    text-align: center;
+  }
+  .d-eyebrow {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: #333;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+  .d-tape-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0;
+    position: relative;
+  }
+  .d-tape-glow {
+    width: 100%;
+    position: relative;
+  }
+  .d-tape-glow::before {
+    content: '';
+    position: absolute;
+    inset: -12px -20px;
+    background: radial-gradient(ellipse at center, rgba(255,208,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .d-tape-glow .tape-stripe-bg { height: 80px; }
+  .d-tape-glow .tape-text-content { font-size: 1.8rem; }
+  .d-bottom {
+    padding: 0 24px 20px;
+  }
+  .d-input-area {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 16px 0;
+    border-top: 1px solid #1E1E1E;
+    border-bottom: 1px solid #1E1E1E;
+    margin-bottom: 16px;
+  }
+  .d-prefix {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+  .d-placeholder {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: #2A2A2A;
+    letter-spacing: 0.06em;
+    flex: 1;
+  }
+  .d-cursor-line {
+    width: 2px;
+    height: 1.2rem;
+    background: var(--accent);
+    animation: blink 1s step-end infinite;
+    flex-shrink: 0;
+  }
+  .d-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .d-btn-generate {
+    flex: 1;
+    height: 48px;
+    background: var(--accent);
+    color: #111;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .d-btn-color {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    border: 2px solid #333;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ─── Scenario Library screens ─────────────── */
+  .lib-phone { height: 520px; }
+  .lib-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* A - library */
+  .a-lib { background: #111; }
+  .a-lib-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .a-lib-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .a-lib-sub {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .a-lib-cards {
+    flex: 1;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .a-lib-card {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .a-lib-card-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .a-lib-card-count {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .a-lib-card-arrow {
+    color: var(--accent);
+    font-size: 0.9rem;
+  }
+  .a-lib-new {
+    margin: 0 16px 16px;
+    height: 44px;
+    border: 1px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .a-lib-new-icon { color: var(--accent); font-size: 1rem; }
+
+  /* C - library (brutalist) */
+  .c-lib { background: #111; }
+  .c-lib-header {
+    border-bottom: 3px solid var(--accent);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .c-lib-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .c-lib-count {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .c-lib-cards {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .c-lib-card {
+    border-bottom: 1px solid #222;
+    padding: 12px 16px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .c-lib-card-num {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: #333;
+    min-width: 28px;
+    display: flex;
+    align-items: center;
+  }
+  .c-lib-card-body {
+    flex: 1;
+  }
+  .c-lib-card-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .c-lib-card-meta {
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .c-lib-card-meta .accent { color: var(--accent); }
+  .c-lib-new {
+    padding: 14px 16px;
+    border-top: 1px solid #2A2A2A;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    margin-top: auto;
+  }
+  .c-lib-new span { color: var(--accent); font-size: 1.2rem; }
+
+  /* ─── Tape scenario screens ─────────────────── */
+  .scenario-phone { height: 560px; }
+  .scenario-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .a-scenario { background: #111; }
+  .a-scenario-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .a-scenario-back {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .a-scenario-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .a-scenario-meta {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .a-scenario-tapes {
+    flex: 1;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .a-tape-item { }
+  .a-tape-item .tape-stripe-bg { height: 60px; }
+  .a-tape-item .tape-text-content { font-size: 1.2rem; }
+  .a-scenario-fab {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    height: 48px;
+    background: var(--accent);
+    color: #111;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* ─── Evaluation section ─────────────────────── */
+  .eval-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  .eval-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    margin-bottom: 24px;
+  }
+  .eval-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .eval-card {
+    background: var(--surface);
+    padding: 20px;
+    border-left: 3px solid var(--accent);
+  }
+  .eval-card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .eval-card-body {
+    font-size: 0.68rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  /* ─── Overview tab ───────────────────────────── */
+  .overview-section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+  }
+  .overview-card {
+    background: var(--surface);
+    padding: 20px;
+  }
+  .overview-card-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .overview-card-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .overview-card-value.accent { color: var(--accent); }
+  .overview-hero {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+  .overview-hero-text {
+    font-size: 0.75rem;
+    line-height: 1.8;
+    color: var(--muted);
+    border-left: 2px solid var(--accent);
+    padding-left: 16px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-title">⚠ DESIGN DIRECTIONS</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showTab('overview')">Overview</div>
+    <div class="nav-tab" onclick="showTab('a')">A — Pure Warning</div>
+    <div class="nav-tab" onclick="showTab('b')">B — Command Center</div>
+    <div class="nav-tab" onclick="showTab('c')">C — Brutalist</div>
+    <div class="nav-tab" onclick="showTab('d')">D — Cinematic</div>
+  </div>
+</nav>
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<div id="tab-overview" class="directions-container active">
+  <div class="direction-header">
+    <div class="direction-label">Caution Tape Generator</div>
+    <div class="direction-title">Four Design Directions</div>
+    <div class="direction-desc">All four directions share the same dark mode foundation, Bebas Neue + DM Mono type system, and caution yellow accent. What differs is the structural philosophy — how much presence the UI has around the tape.</div>
+  </div>
+
+  <div class="overview-hero">
+    <p class="overview-hero-text">The core question across all four directions: <strong style="color:#F0F0F0">how much does the UI get out of the way?</strong> Direction A says almost completely. Direction C says the UI itself should feel like a warning system. B and D fall in between — B more structured, D more dramatic. All four commit fully to the industrial aesthetic.</p>
+  </div>
+
+  <div class="overview-section">
+    <div class="overview-card">
+      <div class="overview-card-label">Direction A</div>
+      <div class="overview-card-value">Pure Warning</div>
+      <div class="overview-card-label" style="margin-top:10px">Character</div>
+      <div class="overview-card-value" style="font-size:0.75rem;font-family:'DM Mono',monospace;color:#888">Minimal, almost recklessly simple. The tape is everything. The UI barely exists.</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">Direction B</div>
+      <div class="overview-card-value">Command Center</div>
+      <div class="overview-card-label" style="margin-top:10px">Character</div>
+      <div class="overview-card-value" style="font-size:0.75rem;font-family:'DM Mono',monospace;color:#888">Structured and official. Like a safety management dashboard. More chrome, more system.</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">Direction C</div>
+      <div class="overview-card-value">Brutalist</div>
+      <div class="overview-card-label" style="margin-top:10px">Character</div>
+      <div class="overview-card-value" style="font-size:0.75rem;font-family:'DM Mono',monospace;color:#888">Heavy borders, dense layout, tape-as-header. The interface itself is a warning sign.</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">Direction D</div>
+      <div class="overview-card-value">Cinematic</div>
+      <div class="overview-card-label" style="margin-top:10px">Character</div>
+      <div class="overview-card-value" style="font-size:0.75rem;font-family:'DM Mono',monospace;color:#888">The tape is a gallery piece. Dramatic negative space, glowing presence, input floats below.</div>
+    </div>
+  </div>
+
+  <div class="eval-section" style="padding-top:0">
+    <div class="eval-title">What to Look For</div>
+    <div class="eval-grid">
+      <div class="eval-card">
+        <div class="eval-card-title">First Impression</div>
+        <div class="eval-card-body">Which direction makes you immediately understand what to do — without reading anything?</div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-card-title">In-Group Moment</div>
+        <div class="eval-card-body">Which would you feel confident pulling out in front of friends? Which feels like it would draw people in?</div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-card-title">Brand Fit</div>
+        <div class="eval-card-body">Which takes the bit most seriously? Which looks most like it could be a real industrial warning system?</div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-card-title">Mobile Feel</div>
+        <div class="eval-card-body">Which layout feels most comfortable to use one-handed, in a dimly lit room, while other people watch?</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DIRECTION A ═══════════════ -->
+<div id="tab-a" class="directions-container">
+  <div class="direction-header">
+    <div class="direction-label">Direction A</div>
+    <div class="direction-title">Pure Warning</div>
+    <div class="direction-desc">Maximum restraint. CAUTION: dominates the homepage in giant type. The input is borderless — just a cursor. The tape preview occupies the negative space below. Generate and a library link are the only affordances. Nothing competes for attention.</div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-wrap">
+      <div class="screen-label">Homepage — Tape Creator</div>
+      <div class="phone a-phone">
+        <div class="a-screen">
+          <div class="a-top-bar"></div>
+          <div class="a-body">
+            <div class="a-caution-label">CAUTION:</div>
+            <div class="a-input-row">
+              <div class="a-input-text">TYPE ANYTHING</div>
+              <div class="a-cursor"></div>
+            </div>
+            <div class="a-tape-preview">
+              <div class="tape-render">
+                <div class="tape-stripe-bg" style="--tape-color:#FFD000">
+                  <div class="tape-stripes" style="--tape-color:#FFD000"></div>
+                  <div class="tape-text-row">
+                    <div class="tape-text-content">CAUTION: TYPE ANYTHING ⚠ CAUTION: TYPE ANYTHING ⚠ CAUTION: TYPE ANYTHING</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="a-footer">
+            <button class="a-btn-primary">Generate</button>
+            <button class="a-btn-ghost">Library</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-wrap">
+      <div class="screen-label">Scenario Library</div>
+      <div class="phone lib-phone">
+        <div class="lib-screen a-lib">
+          <div class="a-lib-header">
+            <div class="a-lib-title">Scenarios</div>
+            <div class="a-lib-sub">4 active · 47 tapes</div>
+          </div>
+          <div class="a-lib-cards">
+            <div class="a-lib-card">
+              <div>
+                <div class="a-lib-card-name">Dave's Apartment</div>
+                <div class="a-lib-card-count">11 tapes about dave's apartment??</div>
+              </div>
+              <div class="a-lib-card-arrow">›</div>
+            </div>
+            <div class="a-lib-card">
+              <div>
+                <div class="a-lib-card-name">The Taco Bell Incident</div>
+                <div class="a-lib-card-count">23 tapes. i have to see this.</div>
+              </div>
+              <div class="a-lib-card-arrow">›</div>
+            </div>
+            <div class="a-lib-card">
+              <div>
+                <div class="a-lib-card-name">Book Club 2024</div>
+                <div class="a-lib-card-count">8 tapes · surprisingly coherent</div>
+              </div>
+              <div class="a-lib-card-arrow">›</div>
+            </div>
+            <div class="a-lib-card">
+              <div>
+                <div class="a-lib-card-name">Greg's Birthday</div>
+                <div class="a-lib-card-count">5 tapes · active incident</div>
+              </div>
+              <div class="a-lib-card-arrow">›</div>
+            </div>
+          </div>
+          <div class="a-lib-new">
+            <span class="a-lib-new-icon">+</span>
+            New Scenario
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-wrap">
+      <div class="screen-label">Scenario View</div>
+      <div class="phone scenario-phone" style="position:relative">
+        <div class="scenario-screen a-scenario">
+          <div class="a-scenario-header">
+            <div class="a-scenario-back">← All Scenarios</div>
+            <div class="a-scenario-name">Dave's Apartment</div>
+            <div class="a-scenario-meta">11 tapes · total containment failure</div>
+          </div>
+          <div class="a-scenario-tapes">
+            <div class="a-tape-item">
+              <div class="tape-stripe-bg" style="--tape-color:#FFD000">
+                <div class="tape-stripes" style="--tape-color:#FFD000"></div>
+                <div class="tape-text-row"><div class="tape-text-content">CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE</div></div>
+              </div>
+            </div>
+            <div class="a-tape-item">
+              <div class="tape-stripe-bg" style="--tape-color:#FF6B35">
+                <div class="tape-stripes" style="--tape-color:#FF6B35"></div>
+                <div class="tape-text-row"><div class="tape-text-content">CAUTION: PASSIVE AGGRESSIVE STICKY NOTES ⚠ CAUTION: PASSIVE AGGRESSIVE STICKY NOTES</div></div>
+              </div>
+            </div>
+            <div class="a-tape-item">
+              <div class="tape-stripe-bg" style="--tape-color:#4ADE80">
+                <div class="tape-stripes" style="--tape-color:#4ADE80"></div>
+                <div class="tape-text-row"><div class="tape-text-content">CAUTION: THE DISHES ⚠ CAUTION: THE DISHES ⚠ CAUTION: THE DISHES ⚠ CAUTION: THE DISHES</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="a-scenario-fab">+ Add Tape</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DIRECTION B ═══════════════ -->
+<div id="tab-b" class="directions-container">
+  <div class="direction-header">
+    <div class="direction-label">Direction B</div>
+    <div class="direction-title">Command Center</div>
+    <div class="direction-desc">More structural chrome. A slim header with wordmark and library link. Input is contained in a bordered field. Preview lives in its own labeled box. Feels like an official tool — a bit like a form you'd fill out to file an incident report.</div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-wrap">
+      <div class="screen-label">Homepage — Tape Creator</div>
+      <div class="phone b-phone">
+        <div class="b-screen">
+          <div class="b-header">
+            <div class="b-wordmark">⚠ CAUTION TAPE GEN</div>
+            <div class="b-nav-link">Library →</div>
+          </div>
+          <div class="b-body">
+            <div>
+              <div class="b-field-label">Warning Text</div>
+              <div class="b-input-block">
+                <span class="b-caution-prefix">CAUTION: </span><span class="b-input-value">YOUR TEXT HERE</span><span class="b-cursor-sm"></span>
+              </div>
+            </div>
+            <div>
+              <div class="b-field-label">Tape Color</div>
+              <div class="b-color-row">
+                <div class="b-color-swatch"></div>
+                <div class="b-color-label">#FFD000 — Caution Yellow</div>
+              </div>
+            </div>
+            <div>
+              <div class="b-preview-label">Live Preview</div>
+              <div class="b-preview-box">
+                <div class="b-tape-mini" style="width:100%">
+                  <div class="tape-stripe-bg" style="--tape-color:#FFD000">
+                    <div class="tape-stripes" style="--tape-color:#FFD000"></div>
+                    <div class="tape-text-row"><div class="tape-text-content">CAUTION: YOUR TEXT HERE ⚠ CAUTION: YOUR TEXT HERE ⚠ CAUTION: YOUR TEXT</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="b-footer">
+            <button class="b-btn-primary">Generate Tape</button>
+            <button class="b-btn-outline">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DIRECTION C ═══════════════ -->
+<div id="tab-c" class="directions-container">
+  <div class="direction-header">
+    <div class="direction-label">Direction C</div>
+    <div class="direction-title">Brutalist</div>
+    <div class="direction-desc">The interface itself is a warning system. A diagonal-stripe header (actual caution tape pattern) at the top. Sections are bordered panels with uppercase labels. Heavy, dense, completely committed to the industrial aesthetic. The UI is part of the joke.</div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-wrap">
+      <div class="screen-label">Homepage — Tape Creator</div>
+      <div class="phone c-phone">
+        <div class="c-screen">
+          <div class="c-tape-header">
+            <div class="c-tape-header-text">CAUTION TAPE GEN</div>
+          </div>
+          <div class="c-body">
+            <div class="c-section">
+              <div class="c-section-header">Warning Input</div>
+              <div class="c-section-body">
+                <div class="c-caution-row">
+                  <span class="c-caution-yellow">CAUTION: </span>DAVE<span class="c-cursor-lg"></span>
+                </div>
+                <div class="c-meta-row">
+                  <div class="c-meta-item">Color <span>#FFD000</span></div>
+                  <div class="c-meta-item">Length <span>4 chars</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="c-section">
+              <div class="c-section-header">Live Preview</div>
+              <div class="c-section-body" style="padding:10px">
+                <div class="c-preview-tape">
+                  <div class="tape-stripe-bg" style="--tape-color:#FFD000">
+                    <div class="tape-stripes" style="--tape-color:#FFD000"></div>
+                    <div class="tape-text-row"><div class="tape-text-content">CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="c-footer">
+            <button class="c-btn-primary">GENERATE</button>
+            <button class="c-btn-ghost">⚙</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-wrap">
+      <div class="screen-label">Scenario Library</div>
+      <div class="phone lib-phone">
+        <div class="lib-screen c-lib">
+          <div class="c-lib-header">
+            <div class="c-lib-title">⚠ SCENARIOS</div>
+            <div class="c-lib-count">4 active · 47 tapes</div>
+          </div>
+          <div class="c-lib-cards">
+            <div class="c-lib-card">
+              <div class="c-lib-card-num">01</div>
+              <div class="c-lib-card-body">
+                <div class="c-lib-card-name">Dave's Apartment</div>
+                <div class="c-lib-card-meta"><span class="accent">11 tapes</span> · total containment failure</div>
+              </div>
+            </div>
+            <div class="c-lib-card">
+              <div class="c-lib-card-num">02</div>
+              <div class="c-lib-card-body">
+                <div class="c-lib-card-name">The Taco Bell Incident</div>
+                <div class="c-lib-card-meta"><span class="accent">23 tapes</span> · i have to see this</div>
+              </div>
+            </div>
+            <div class="c-lib-card">
+              <div class="c-lib-card-num">03</div>
+              <div class="c-lib-card-body">
+                <div class="c-lib-card-name">Book Club 2024</div>
+                <div class="c-lib-card-meta"><span class="accent">8 tapes</span> · active incident</div>
+              </div>
+            </div>
+            <div class="c-lib-card">
+              <div class="c-lib-card-num">04</div>
+              <div class="c-lib-card-body">
+                <div class="c-lib-card-name">Greg's Birthday</div>
+                <div class="c-lib-card-meta"><span class="accent">5 tapes</span> · under investigation</div>
+              </div>
+            </div>
+            <div class="c-lib-new"><span>+</span> New Scenario</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DIRECTION D ═══════════════ -->
+<div id="tab-d" class="directions-container">
+  <div class="direction-header">
+    <div class="direction-label">Direction D</div>
+    <div class="direction-title">Cinematic</div>
+    <div class="direction-desc">The tape is a gallery piece. Maximum negative space surrounds it. The input floats at the bottom beneath the tape, which glows slightly against the near-black background. Dramatic and focused — the tape gets the full stage.</div>
+  </div>
+
+  <div class="screens-row">
+    <div class="screen-wrap">
+      <div class="screen-label">Homepage — Tape Creator</div>
+      <div class="phone d-phone">
+        <div class="d-screen">
+          <div class="d-top">
+            <div class="d-eyebrow">⚠ CAUTION TAPE GENERATOR</div>
+          </div>
+          <div class="d-tape-stage">
+            <div class="d-tape-glow">
+              <div class="tape-stripe-bg" style="--tape-color:#FFD000">
+                <div class="tape-stripes" style="--tape-color:#FFD000"></div>
+                <div class="tape-text-row"><div class="tape-text-content">CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE ⚠ CAUTION: DAVE</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="d-bottom">
+            <div class="d-input-area">
+              <div class="d-prefix">CAUTION:</div>
+              <div class="d-placeholder">DAVE</div>
+              <div class="d-cursor-line"></div>
+            </div>
+            <div class="d-actions">
+              <button class="d-btn-generate">Generate</button>
+              <div class="d-btn-color" style="background:#FFD000"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.directions-container').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Local CLI / deploy settings. Edge Functions use the service role on the server;
+# clients call with the anon key (Authorization: Bearer) when verify_jwt = false.
+
+[functions.create-scenario]
+verify_jwt = false
+
+[functions.get-scenario-by-slug]
+verify_jwt = false
+
+[functions.add-tape]
+verify_jwt = false
+
+[functions.list-scenarios]
+verify_jwt = false
