@@ -1,0 +1,17 @@
+{
+  "name": "caution-bmad",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:api": "vitest run tests/api"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "@types/node": "^22.10.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  }
+}

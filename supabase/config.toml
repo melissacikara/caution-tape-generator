@@ -12,3 +12,9 @@ verify_jwt = false
 
 [functions.list-scenarios]
 verify_jwt = false
+
+[functions.update-tape]
+verify_jwt = false
+
+[functions.delete-tape]
+verify_jwt = false

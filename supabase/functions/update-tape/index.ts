@@ -9,9 +9,9 @@ import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
   scenarioSlug: z.string().min(1).max(128),
+  tapeId: z.string().uuid(),
   tapeText: z.string().min(1).max(2000),
   color: z.string().min(1).max(32),
-  idempotencyKey: z.string().min(1).max(128).optional(),
 })
 
 serve(async (req) => {
@@ -41,7 +41,7 @@ serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, key)
-  const { scenarioSlug, tapeText, color, idempotencyKey } = parsed.data
+  const { scenarioSlug, tapeId, tapeText, color } = parsed.data
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
@@ -56,51 +56,24 @@ serve(async (req) => {
     return jsonError('NOT_FOUND', 'Scenario not found', 404)
   }
 
-  if (idempotencyKey) {
-    const { data: existing } = await supabase
-      .from('idempotency_tapes')
-      .select('tape_id')
-      .eq('scenario_id', scenario.id)
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle()
-
-    if (existing?.tape_id) {
-      const { data: tape, error: te } = await supabase
-        .from('tapes')
-        .select('id, scenario_id, tape_text, color, created_at, updated_at')
-        .eq('id', existing.tape_id)
-        .single()
-      if (!te && tape) {
-        return jsonOk({ tape: mapTape(tape), idempotent: true })
-      }
-    }
-  }
-
-  const { data: tape, error: tErr } = await supabase
+  const { data: rows, error: uErr } = await supabase
     .from('tapes')
-    .insert({
-      scenario_id: scenario.id,
+    .update({
       tape_text: tapeText,
       color,
+      updated_at: new Date().toISOString(),
     })
+    .eq('id', tapeId)
+    .eq('scenario_id', scenario.id)
     .select('id, scenario_id, tape_text, color, created_at, updated_at')
-    .single()
 
-  if (tErr || !tape) {
-    return jsonError('DATABASE_ERROR', tErr?.message ?? 'Insert failed', 500)
+  if (uErr) {
+    return jsonError('DATABASE_ERROR', uErr.message, 500)
+  }
+  const tape = rows?.[0]
+  if (!tape) {
+    return jsonError('NOT_FOUND', 'Tape not found in this scenario', 404)
   }
 
-  if (idempotencyKey) {
-    const { error: idemErr } = await supabase.from('idempotency_tapes').insert({
-      idempotency_key: idempotencyKey,
-      scenario_id: scenario.id,
-      tape_id: tape.id,
-    })
-    if (idemErr) {
-      // Duplicate race: return tape anyway
-      console.warn('idempotency insert', idemErr.message)
-    }
-  }
-
-  return jsonOk({ tape: mapTape(tape), idempotent: false })
+  return jsonOk({ tape: mapTape(tape) })
 })

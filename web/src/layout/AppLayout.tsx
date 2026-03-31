@@ -7,7 +7,7 @@ export function AppLayout() {
   const configured = isSupabaseConfigured()
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh overflow-x-hidden bg-background">
       {!configured ? (
         <div
           role="status"

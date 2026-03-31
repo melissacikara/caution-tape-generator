@@ -12,6 +12,7 @@ export type TapeDto = {
   tapeText: string
   color: string
   createdAt: string
+  updatedAt?: string
 }
 
 export type CreateScenarioBody = {
@@ -39,6 +40,26 @@ export type AddTapeBody = {
 export type AddTapeResponse = {
   tape: TapeDto
   idempotent: boolean
+}
+
+export type UpdateTapeBody = {
+  scenarioSlug: string
+  tapeId: string
+  tapeText: string
+  color: string
+}
+
+export type UpdateTapeResponse = {
+  tape: TapeDto
+}
+
+export type DeleteTapeBody = {
+  scenarioSlug: string
+  tapeId: string
+}
+
+export type DeleteTapeResponse = {
+  ok: boolean
 }
 
 export type ScenarioSummaryItem = {

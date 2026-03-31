@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 export type TapeRendererState = 'empty' | 'live' | 'generated'
 
 export type TapeRendererProps = {
@@ -61,8 +63,9 @@ function normalizeHex(color: string): string {
 /**
  * Renders caution-tape visuals: diagonal stripes + repeating `CAUTION: [text] ⚠` (FR4).
  * Accessible name is provided once via `aria-label`; the repeating strip is `aria-hidden`.
+ * Memoized so parent re-renders (e.g. typing elsewhere) don’t redraw the full strip (Epic 4.2).
  */
-export function TapeRenderer({ text, color, state, className = '' }: TapeRendererProps) {
+function TapeRendererInner({ text, color, state, className = '' }: TapeRendererProps) {
   const trimmed = text.trim()
   const isEmpty = state === 'empty' || trimmed.length === 0
   const baseHex = normalizeHex(color)
@@ -131,3 +134,6 @@ export function TapeRenderer({ text, color, state, className = '' }: TapeRendere
     </div>
   )
 }
+
+export const TapeRenderer = memo(TapeRendererInner)
+TapeRenderer.displayName = 'TapeRenderer'

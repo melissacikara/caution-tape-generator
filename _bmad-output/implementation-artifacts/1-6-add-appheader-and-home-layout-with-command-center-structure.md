@@ -1,6 +1,6 @@
 # Story 1.6: Add AppHeader and home layout with Command Center structure
 
-Status: review
+Status: done
 
 <!-- Ultimate context engine analysis completed — comprehensive developer guide created. -->
 
@@ -52,3 +52,9 @@ Composer (Cursor agent)
 ### Change Log
 
 - **2026-03-30:** Story 1.6 — AppHeader + Command Center width shell.
+
+### Review Findings
+
+- [x] [Review][Patch] Align `AppHeader` file comment with story AC2 — Explicitly state pre-library MVP behavior and that Epic 3 may replace the Library target with a dedicated library route (current comment describes adaptive home but omits “Epic 3 / pre-library” wording requested in tasks). [`web/src/components/AppHeader.tsx`]
+
+- [x] [Review][Defer] Story file list references `web/src/App.tsx` — deferred, pre-existing — Implementation uses `AppLayout.tsx`, `router.tsx`, and `HomePage.tsx` instead; update the story file list when convenient for traceability (not a runtime defect).

@@ -22,6 +22,7 @@ export function mapTape(row: {
   tape_text: string
   color: string
   created_at: string
+  updated_at?: string
 }) {
   return {
     id: row.id,
@@ -29,5 +30,6 @@ export function mapTape(row: {
     tapeText: row.tape_text,
     color: row.color,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }

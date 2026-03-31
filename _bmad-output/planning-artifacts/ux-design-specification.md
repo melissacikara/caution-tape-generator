@@ -2,15 +2,27 @@
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 workflowComplete: true
 completedAt: '2026-03-29'
+lastSyncedWithPrd: '2026-03-30'
+lastSyncedWithArchitecture: '2026-03-30'
+syncNote: 'Aligned with PRD FR29–FR32 (edit/delete, delete confirmation) and architecture (DeleteConfirmSheet, optimistic rollback, inline errors).'
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
+  - _bmad-output/planning-artifacts/architecture.md
   - _bmad-output/brainstorming/brainstorming-session-2026-03-29-1930.md
 ---
 
 # UX Design Specification — Caution Tape Generator
 
 **Author:** Melissa
-**Date:** 2026-03-29
+**Date:** 2026-03-29 (synced with PRD & architecture 2026-03-30)
+
+---
+
+## Alignment With PRD & Architecture
+
+- **FR29–FR32:** Scenario view supports editing tape text/color and deleting tapes; anyone with the link has the same capabilities as add. **FR32:** one explicit confirmation step before permanent delete (modal or bottom sheet), copy short and on-brand — safety against accidental taps, not identity verification.
+- **Security posture (PRD):** Link possession implies full edit/delete for MVP; no per-tape ownership UI. Future tightening (auth, soft-delete) would be a product change, not assumed here.
+- **Architecture:** Client uses TanStack Query for mutations; optimistic add/edit/delete with **rollback** on failure; **inline** errors (no toast spam for MVP); `DeleteConfirmSheet` in `features/scenario` per project structure doc.
 
 ---
 
@@ -35,11 +47,12 @@ The core design philosophy: **seriousness of format + absurdity of content = the
 1. **The two-entry-point problem** — The homepage (Creator flow) and the shared-link experience (Contributor flow) are completely different entry points. The UX must feel coherent and equally frictionless despite never starting the same way twice.
 2. **Mobile-first, in-the-moment performance** — This app gets used with people watching. Any hesitation, confusion, or load lag kills the social moment. The UI must be instantly readable and operable under real social pressure.
 3. **The tape visual is the product** — The entire UX is in service of one visual output. If the tape doesn't look genuinely official, the joke falls flat. The live preview experience is the highest-risk design challenge and must be nailed before anything else.
+4. **Destructive actions without breaking the bit** — Anyone with the scenario link can edit or delete any tape (same anonymous model as add). Deletes require a single explicit confirmation step (modal or bottom sheet) so a stray tap does not remove a joke; copy stays short and in the industrial voice. Confirmation is UX safety, not authentication — it must not feel like a login or permission gate.
 
 ### Design Opportunities
 
 1. **The dead-simple homepage as brand statement** — Just "CAUTION:" and a blinking cursor. That emptiness is the invitation. Executed well, it's the funniest and most confident first impression a web app can make.
-2. **Scenario status as free gamification** — Auto-generated labels ("Under Investigation" → "Active Incident" → "Total Containment Failure") based on tape count cost nothing to build but create a social loop compelling enough to keep adding tapes.
+2. **Scenario status as free gamification** — Auto-generated labels ("Under Investigation" → "Active Incident" → "Total Containment Failure") based on tape count cost nothing to build but create a social loop compelling enough to keep adding tapes. *(Growth / post-MVP per PRD — not required for MVP.)*
 3. **The tape count as provocation** — "23 tapes about a Taco Bell??" on a scenario card is more compelling than any call-to-action. Information design and copy can carry significant UX weight throughout the product.
 
 ## Core User Experience
@@ -114,7 +127,7 @@ The Caution Tape Generator is built around a single emotional peak: **the deligh
 | **Surprise** | The live preview delivers this on every first use; tape quality exceeds expectations |
 | **Belonging** | The shared scenario creates a small, anonymous group with a shared joke |
 | **Accomplishment** | Adding a tape that makes the group laugh — the social validation is the payoff |
-| **Delight** | The tape count provocations, scenario status labels, reaction set — layered throughout |
+| **Delight** | The tape count provocations; scenario status labels and reaction set are **post-MVP** hooks — layered when shipped |
 | **Trust** | Users need to trust their tapes won't disappear — persistence is an emotional promise |
 
 **Emotions to avoid:** Confusion (the experience must always be self-evident), embarrassment (fumbling the app in front of others), anxiety (nothing should feel breakable or loseable).
@@ -167,7 +180,7 @@ The Caution Tape Generator is built around a single emotional peak: **the deligh
 - **Account prompts at any step** — Sign up walls, even optional ones, kill anonymous social products.
 - **Multiple CTAs competing** — One screen, one job. Generator sites that scatter attention lose the bit.
 - **Playful/whimsical UI chrome** — Confetti, bouncing elements, cartoon illustrations wink at the user and collapse the industrial seriousness that makes the joke work.
-- **Confirmation dialogs** — "Are you sure you want to add this tape?" destroys momentum. Trust the user.
+- **Confirmation before *adding* a tape** — "Are you sure you want to add this tape?" destroys momentum. Trust the user on create. **Exception (required):** explicit confirmation before **permanent delete** — see FR32; this is not optional and does not contradict the add flow.
 
 ### Design Inspiration Strategy
 
@@ -181,7 +194,7 @@ The Caution Tape Generator is built around a single emotional peak: **the deligh
 - Floating action button → pinned ADD button styled to match the industrial aesthetic
 
 **Avoid:**
-- Any pattern that adds ceremony (accounts, onboarding, confirmation steps)
+- Any pattern that adds ceremony (accounts, onboarding, unnecessary steps) — **except** the one-step delete confirmation required for permanent removal (FR32)
 - Any visual style that signals "fun web toy" rather than "official warning system"
 
 ## Design System Foundation
@@ -301,12 +314,25 @@ flowchart TD
     N --> O[Tape appears at top of stack immediately\nNo spinner, no confirmation toast]
     O --> P([Returns to scrolling the stack])
     D -- No --> Q([Reads and exits — no account created])
+    P --> R{Edit or delete a tape?}
+    R -- No --> P
+    R -- Edit --> S[Opens tape creator pre-filled\nSame live preview + color as add]
+    S --> T[Saves changes — stack updates immediately]
+    R -- Delete --> U[Delete affordance tapped]
+    U --> V[Confirmation sheet/modal\nShort copy, primary destructive + cancel]
+    V --> W{Confirms delete?}
+    W -- Yes --> X[Tape removed for everyone\nNo toast — stack is truth]
+    W -- No --> P
+    T --> P
+    X --> P
 ```
 
 **Key UX decisions:**
 - Landing URL goes directly to the scenario view — zero friction before content
 - ADD TAPE button is always visible (pinned) regardless of scroll position
 - After adding, tape appears instantly — the stack IS the confirmation
+- **Edit** reuses the same tape creator pattern (text + color + Generate/save); updated tape replaces the row in the stack immediately after save (optimistic UI with rollback on failure per architecture)
+- **Delete** requires one explicit confirmation (modal on desktop, bottom sheet on mobile) before the API call — reduces accidental taps; same link-based rules as add (not auth)
 - A user who just reads and leaves creates zero data, zero account, zero trace
 
 ---
@@ -344,14 +370,16 @@ flowchart TD
 
 **Feedback Patterns:**
 - Tape rendering = continuous and live, no explicit feedback needed
-- Tape added to scenario = immediate stack appearance, no toast or confirmation
+- Tape added to scenario = immediate stack appearance, no toast or confirmation *for add*
+- Tape edited = stack shows updated tape immediately; inline error only if save fails (rollback)
+- Tape deleted (after confirm) = tape disappears from stack; inline error if delete fails
 - Share URL = exists automatically, no user action required to generate it
 
 ### Flow Optimization Principles
 
 - Every journey converges on the tape creator as the core action
 - No journey requires more than 3 taps to reach the ability to add a tape
-- Error states are avoided by design: no accounts means no login failure; no confirmation dialogs means no accidental dismissal; immediate persistence means no save failures
+- Error states are reduced by design: no accounts means no login failure; immediate persistence means no spurious save failures. **Delete** is the one flow that uses a confirmation dialog — to prevent accidental loss, not to gate identity
 
 ## Component Strategy
 
@@ -405,8 +433,15 @@ Since we chose Tailwind CSS (utility-first, no pre-built components), there are 
 
 **`TapeStack`**
 - **Purpose:** Scrollable vertical list of all tapes in a scenario
-- **Anatomy:** Scrollable container → ordered list of `TapeRenderer` instances, newest at top → `PinnedAddButton` overlaid at bottom
+- **Anatomy:** Scrollable container → ordered list of tape rows (each: `TapeRenderer` + per-tape actions) → `PinnedAddButton` overlaid at bottom
 - **Behavior:** Newest tape appears at top on add; no pagination
+- **Per-tape actions:** Edit and delete affordances (icon buttons or text links in industrial voice) visible on each row — same capability for everyone with the link (FR29–FR31)
+
+**`DeleteConfirmSheet`** (or modal on larger viewports)
+- **Purpose:** Satisfy FR32 — explicit confirmation before permanent delete
+- **Anatomy:** Short headline + one line of consequence + **Cancel** (secondary) + **Delete** (destructive primary — still on-brand: high contrast, not “cute”)
+- **Behavior:** Opens from delete tap; only on **Confirm** does the client call delete; focus returns to the stack or a sensible focus target on cancel
+- **Accessibility:** Focus trap in modal; `aria-labelledby` / `aria-describedby`; destructive action not the only focusable exit without cancel
 
 **`PinnedAddButton`**
 - **Purpose:** Always-visible CTA to add a tape within a scenario view
@@ -418,6 +453,7 @@ Since we chose Tailwind CSS (utility-first, no pre-built components), there are 
 
 - Refined HSL color picker (Phase 1 can use basic color input as placeholder)
 - Adaptive homepage logic — context-aware home screen switching based on whether user has existing scenarios
+- Edit/delete polish: optimistic updates aligned with TanStack Query invalidation; failed edit/delete shows inline error and reverts UI to server state (per architecture)
 
 ### Component Implementation Strategy
 
@@ -436,6 +472,7 @@ Since we chose Tailwind CSS (utility-first, no pre-built components), there are 
 | 2 | `ScenarioCard` + `ScenarioLibrary` | Scenario browsing |
 | 2 | `TapeStack` | Scenario view |
 | 2 | `PinnedAddButton` | Sticky CTA within scenario |
+| 2 | `DeleteConfirmSheet` | FR32 — confirm before permanent delete |
 | 3 | `ColorPickerSwatch` | Refined HSL picker |
 | 3 | Adaptive homepage | Context-aware home screen |
 
@@ -465,11 +502,15 @@ This product deliberately minimises feedback UI — the tape and stack are the f
 | **User is typing** | Live tape preview updates continuously | No additional feedback needed |
 | **Tape generated** | Tape visually locks in | Confirms the creative moment without a modal |
 | **Tape added to scenario** | Tape appears at top of stack immediately | The stack IS the confirmation — no toast, no "saved!" |
+| **Tape edited** | Updated tape in stack immediately (optimistic); inline error + rollback if server rejects | Matches PRD reliability; no toast spam (architecture) |
+| **Delete initiated** | Modal or bottom sheet: short copy, Cancel + Delete | FR32 — confirmation is not auth; prevents stray taps |
+| **Delete completed** | Row disappears; stack is truth | No success toast |
+| **Delete or edit failed** | Inline error on the row or inline under actions; revert optimistic UI | Aligns with architecture process patterns |
 | **Scenario link available** | Link displayed inline below scenario name | No modal, no "link generated" message |
 | **Slow connection on tape save** | Inline muted status text: "Saving..." | Only shown if > 1s |
-| **Save failure** | Inline error: "Couldn't save. Try again." | Tape creator stays open so user doesn't lose their work |
+| **Save failure (add)** | Inline error: "Couldn't save. Try again." | Tape creator stays open so user doesn't lose their work |
 
-**Anti-pattern:** Toast notifications — they interrupt the social moment and are unnecessary when the stack update is immediate and visible.
+**Anti-pattern:** Toast notifications for routine success — they interrupt the social moment. Prefer stack updates and inline errors. **Exception:** none required for delete success; the disappearing row is enough.
 
 ### Form Patterns
 
@@ -486,7 +527,8 @@ This product deliberately minimises feedback UI — the tape and stack are the f
 | **Scenario card tap** | Navigates into scenario view |
 | **Back navigation** | Single `← All Scenarios` ghost link in scenario view header |
 | **Deep link entry** | Shared URL loads directly into scenario view — no redirect to homepage |
-| **Tape creator from scenario** | Opens as a full-screen action state within scenario context — does not navigate away |
+| **Tape creator from scenario** | Opens as a full-screen action state within scenario context — does not navigate away (add or **edit** — same shell, pre-filled when editing) |
+| **Delete from scenario** | Confirmation overlay only — user remains in scenario context |
 
 **Rule:** Navigation depth never exceeds two levels (Library → Scenario). The tape creator is an action state, not a page.
 
@@ -507,6 +549,8 @@ This product deliberately minimises feedback UI — the tape and stack are the f
 | **Shared scenario link load** | Skeleton tape placeholders (grey rectangles) while tapes fetch — max 2s target |
 | **Tape save (fast connection)** | No loading state — tape appears immediately (optimistic UI) |
 | **Tape save (slow connection)** | "Saving..." muted text below ADD button; inline error on failure |
+| **Edit or delete in flight** | Prefer optimistic UI; if slow, subtle inline "Saving…" / "Removing…" on the affected row only |
+| **Edit/delete failed** | Inline error near the row or actions; revert optimistic state to match server |
 
 ## Responsive Design & Accessibility
 
@@ -646,6 +690,10 @@ The core interaction is **familiar patterns combined in a novel context:**
 - The generated tape is then presented with a clear next action: **Add to Scenario** (or "Start a scenario" on first use from the homepage)
 - After adding, the tape appears at the top of the scenario stack immediately — no animation delay, no toast notification: it's simply there
 - Generate separates creative authorship from the social sharing action, reinforcing the sense of ownership over the tape
+
+**5. Edit and delete (scenario view):**
+- **Edit:** Opens the same creator pattern with existing text and color; saving updates the row in place with immediate feedback (optimistic UI, rollback on error)
+- **Delete:** User invokes delete → **confirmation** → on confirm, tape is removed for all viewers with the link; failed delete shows inline error and leaves data consistent with the server
 
 ## Visual Design Foundation
 

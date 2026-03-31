@@ -10,6 +10,8 @@ date: '2026-03-29T12:00:00'
 lastStep: 8
 status: complete
 completedAt: '2026-03-29'
+prdSyncedAt: '2026-03-30'
+prdSyncNote: 'Reconciled with edited PRD — tape edit/delete (FR29–FR32), delete confirmation, security/reliability NFRs.'
 ---
 
 # Architecture Decision Document
@@ -22,19 +24,20 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 **Functional Requirements:**
 
-The PRD defines **28 functional requirements (FR1–FR28)**. Architecturally they imply:
+The PRD defines **32 functional requirements (FR1–FR32)**. Architecturally they imply:
 
 - **Tape pipeline:** Live text-in → repeated “CAUTION: [text]” pattern, diagonal stripes, industrial typography, user-selected color, length scaling with character count (FR1–FR8).
 - **Scenario model:** Named scenarios, vertical tape stack (newest-at-top), tape count per scenario, navigation between library ↔ scenario, tape creation from homepage and from within a scenario (FR9–FR14, FR26–FR28).
 - **Library & entry:** Home/scenario library with cards (name + count), new scenario from library, adaptive first-time vs returning flows as described in PRD/UX (FR15–FR18).
-- **Sharing & identity:** Shareable URL per scenario; anyone with the link can view and add; **no authentication** anywhere (FR19–FR22).
-- **Persistence:** Scenarios and tapes stored permanently; adds from shared links persist immediately (FR23–FR25).
+- **Sharing & identity:** Shareable URL per scenario; anyone with the link can **view, add, edit, and delete** tapes (same anonymous, link-based capability); **no authentication** anywhere (FR19–FR22, FR29–FR31).
+- **Tape lifecycle:** Edit existing tape (text and/or color) from scenario view; delete tape for all viewers; **explicit confirmation before permanent delete** (modal or bottom sheet — UX safety, not auth) (FR29–FR32).
+- **Persistence:** Scenarios and tapes stored permanently; adds, edits, and deletes from shared links apply immediately for everyone with the link (FR23–FR25).
 
 **Non-Functional Requirements:**
 
 - **Performance:** Live preview must feel instantaneous (lag = defect); app interactive within **~2s** on typical mobile; shared scenario usable within **~2s**; color picker responsive on touch.
-- **Security & privacy:** No PII; slugs **non-guessable** (not sequential IDs); no credentials or payments.
-- **Reliability:** No silent loss of scenarios/tapes; confirmed tapes must save and become visible to others; poor connectivity must not discard work (inline saving/error patterns per UX).
+- **Security & privacy:** No PII; slugs **non-guessable** (not sequential IDs); no credentials or payments. **Link possession = full capability** (including edit/delete) per PRD — no per-tape ownership or audit trail in MVP; future tightening (auth, ownership, soft-delete) would be a separate product change.
+- **Reliability:** No silent loss of scenarios/tapes; confirmed tapes must save and become visible to others; **edits and deletes** must not leave UI and stored state inconsistent if a mutation fails; poor connectivity must not discard work (inline saving/error patterns per UX).
 
 **Scale & Complexity:**
 
@@ -79,7 +82,7 @@ The PRD’s **Experience MVP** implies **proving the tape visual (TapeRenderer) 
 - **Data integrity & poor network behavior** — persistence promise, optimistic flows, **idempotent** writes, **rollback** on failure.
 - **Routing & deep linking** — homepage vs scenario URL with no auth gate.
 - **Accessibility** — keyboard, focus, contrast; tape content exposed to AT; **focus management** when opening the tape creator from scenario view (routing/state, not a late UI patch).
-- **Security posture without auth** — non-guessable slugs; light **abuse/rate** boundaries.
+- **Security posture without auth** — non-guessable slugs; light **abuse/rate** boundaries; **destructive actions** gated by **confirmation UI** (FR32), not by identity.
 
 ## Starter Template Evaluation
 
@@ -140,12 +143,12 @@ Persistence and HTTP mutations are implemented per **Core Architectural Decision
 
 - **Data:** Supabase **PostgreSQL** as the system of record; **Edge Functions** as the **only** server-side entry for mutating and listing scenarios/tapes (no direct client writes to privileged DB roles).
 - **Hosting:** **Vercel** for the **Vite/React SPA**; Supabase hosts DB + Edge Functions (stay on **free** tiers until usage forces a change).
-- **Identity:** **No end-user authentication** — matches PRD; access control is **possession of non-guessable scenario slug** plus **server-side** limits.
+- **Identity:** **No end-user authentication** — matches PRD; access control is **possession of non-guessable scenario slug** (read / add / edit / delete tapes) plus **server-side** limits.
 - **Client stack:** **Vite** + **React** + **TypeScript** + **Tailwind CSS v4** (`@tailwindcss/vite`) per starter evaluation.
 
 **Important Decisions (Shape Architecture):**
 
-- **API shape:** **HTTPS JSON** over **Supabase Edge Function** endpoints (REST-like resources: e.g. scenario by slug, add tape, create scenario). Exact paths and payloads defined at implementation; **OpenAPI optional**, not blocking.
+- **API shape:** **HTTPS JSON** over **Supabase Edge Function** endpoints (REST-like resources: e.g. scenario by slug, add tape, **update tape**, **delete tape**, create scenario). Exact paths and payloads defined at implementation; **OpenAPI optional**, not blocking.
 - **Validation:** **Zod** (or equivalent) at the Edge Function boundary for payloads; shared types between client and server where practical.
 - **Server state:** **TanStack Query** (`@tanstack/react-query`, v5 line on npm) for fetching/mutations, retries, and cache invalidation after tape/scenario changes.
 - **Routing:** **React Router** (v7 line on npm) for SPA routes: home/library, scenario by slug, tape creator flows.
@@ -161,7 +164,7 @@ Persistence and HTTP mutations are implemented per **Core Architectural Decision
 ### Data Architecture
 
 - **Database:** **Supabase-managed PostgreSQL** (single project; **free tier**).
-- **Schema:** Tables for **scenarios** (id, name, **public slug**, timestamps) and **tapes** (id, scenario id, text, color, sort order / created_at). Slug generated with **cryptographically strong randomness** (not sequential IDs).
+- **Schema:** Tables for **scenarios** (id, name, **public slug**, timestamps) and **tapes** (id, scenario id, text, color, sort order / **created_at**, **updated_at** for edits). Slug generated with **cryptographically strong randomness** (not sequential IDs).
 - **Migrations:** **Supabase** migration workflow (SQL files) **or** **Drizzle** + migrations — choose one at implementation and keep migrations versioned.
 - **Access pattern:** **Edge Functions** use the **service role** (or equivalent server secret) to talk to Postgres; **no** service role in the browser.
 - **Caching:** **HTTP caching** on safe `GET` responses optional; **no** Redis for MVP.
@@ -169,14 +172,14 @@ Persistence and HTTP mutations are implemented per **Core Architectural Decision
 ### Authentication & Security
 
 - **Authentication:** **None** for users — no Supabase Auth flows for friends in MVP.
-- **Authorization:** **Scenario slug** is a **capability**; anyone with the link can read/add per PRD; **no** per-user ACL.
+- **Authorization:** **Scenario slug** is a **capability**; anyone with the link can read, add, update, and delete tapes per PRD; **no** per-user ACL or per-tape ownership in MVP.
 - **API keys:** **Anon** key only in the client if required for **Supabase client** usage; **secrets** only in Edge Function env. **Never** ship service-role keys to Vercel client bundles.
 - **Abuse / free-tier posture:** **Rate limits** and **max text length** enforced in Edge Functions; **idempotent** tape-create where practical to survive flaky mobile networks.
 - **Transport:** **HTTPS** everywhere (Vercel + Supabase defaults).
 
 ### API & Communication Patterns
 
-- **Style:** **REST-like JSON** over **Edge Functions** (clear, debuggable, works well with TanStack Query).
+- **Style:** **REST-like JSON** over **Edge Functions** (clear, debuggable, works well with TanStack Query). Tape mutations include **PATCH/PUT**-style update and **DELETE** with scenario scope validated server-side (slug + tape id).
 - **Errors:** **Stable error shape** (e.g. `{ error: { code, message } }`) and HTTP status codes; client shows **inline** errors per UX (no toast spam).
 - **Documentation:** Inline comments + optional OpenAPI later; not blocking for MVP.
 - **Client ↔ server:** Browser calls **Edge Function URLs** (or Supabase-invoked routes per chosen pattern); **CORS** configured for the **Vercel production origin** and **local dev** origin.
@@ -202,15 +205,15 @@ Persistence and HTTP mutations are implemented per **Core Architectural Decision
 **Implementation Sequence:**
 
 1. **Supabase** project + **schema** + **migrations** + **slug** strategy.
-2. **Edge Functions** for **create scenario**, **get scenario by slug**, **add tape** (with limits + idempotency hooks).
+2. **Edge Functions** for **create scenario**, **get scenario by slug**, **add tape**, **update tape**, **delete tape** (with limits + idempotency hooks where applicable).
 3. **Vite** app + **routing** + **TanStack Query** wiring to Edge Functions.
 4. **TapeRenderer** spike (DOM/SVG/canvas) until **performance + a11y** bar is met.
-5. **Polish:** optimistic UI, skeleton loading, focus management per UX.
+5. **Polish:** optimistic UI (including **rollback** on failed edit/delete), **delete confirmation** flow (FR32), skeleton loading, focus management per UX.
 
 **Cross-Component Dependencies:**
 
 - **Slug format** and **Edge Function** contract drive **React Router** routes and **share links**.
-- **TanStack Query** mutation success must **invalidate** scenario/tape queries so the **tape stack** matches PRD “immediate” feel.
+- **TanStack Query** mutation success must **invalidate** (or **update**) scenario/tape queries so the **tape stack** matches PRD “immediate” feel for **add, edit, and delete**.
 - **Non-negotiable:** **service role** never in client; **free tier** usage monitored so **egress** and **Function invocations** stay reasonable for friends-only use.
 
 ## Implementation Patterns & Consistency Rules
@@ -306,7 +309,7 @@ supabase/
 
 **Error Handling Patterns:**
 
-- **Mutations:** surface **inline** error string from `error.message` mapped from API `{ error.message }`; keep creator open on failure (per UX).
+- **Mutations:** surface **inline** error string from `error.message` mapped from API `{ error.message }`; keep creator open on failure (per UX). **Edit/delete failures** must **revert optimistic updates** and keep list/server state aligned (per PRD reliability).
 - **Query errors:** scenario view shows **inline** retry affordance; no blocking modal for MVP.
 - **React Error Boundary:** optional at route level for unexpected render errors — **not** for expected API errors.
 
@@ -372,7 +375,7 @@ caution-bmad/
 │   │   │   │   ├── hooks/
 │   │   │   │   └── *.test.tsx
 │   │   │   ├── scenario/
-│   │   │   │   ├── components/     # TapeStack, PinnedAddButton, scenario shell
+│   │   │   │   ├── components/     # TapeStack, PinnedAddButton, edit/delete, DeleteConfirmSheet
 │   │   │   │   ├── hooks/
 │   │   │   │   └── *.test.tsx
 │   │   │   └── library/
@@ -400,6 +403,10 @@ caution-bmad/
 │       │   └── index.ts
 │       ├── add-tape/
 │       │   └── index.ts
+│       ├── update-tape/
+│       │   └── index.ts
+│       ├── delete-tape/
+│       │   └── index.ts
 │       └── list-scenarios/         # GET library — add when implementing FR15–FR18
 │           └── index.ts
 └── _bmad-output/
@@ -418,7 +425,7 @@ caution-bmad/
 **Component Boundaries:**
 
 - **`features/tape`:** creation UI + **TapeRenderer**; no direct scenario list fetching (use hooks that call `lib/api-client`).
-- **`features/scenario`:** tape stack + add flow; depends on **scenario slug** from router.
+- **`features/scenario`:** tape stack + add flow + **edit/delete** (with **delete confirmation** before API call); depends on **scenario slug** from router.
 - **`features/library`:** scenario grid; depends on **list-scenarios** Edge Function.
 - **`components/layout`:** header/navigation; no business logic beyond links.
 
@@ -443,6 +450,7 @@ caution-bmad/
 | Scenario management (FR9–FR14) | `web/src/features/scenario/` + Edge `get-scenario-by-slug`, `add-tape` |
 | Scenario library (FR15–FR18) | `web/src/features/library/` + Edge `list-scenarios` |
 | Sharing & anonymous access (FR19–FR22) | `web/src/routes/` (deep link) + slug generation in Edge `create-scenario` |
+| Tape editing & deletion (FR29–FR32) | `web/src/features/scenario/` (edit UI, **delete confirmation**) + Edge `update-tape`, `delete-tape` |
 | Persistence (FR23–FR25) | `supabase/migrations/` + Edge mutations |
 | Layout & navigation (FR26–FR28) | `web/src/components/layout/`, `routes/` |
 
@@ -458,7 +466,7 @@ caution-bmad/
 
 **External integrations:** **Supabase** (DB + Edge); **Vercel** (static + env); **Google Fonts** (UX).
 
-**Data flow:** User input → **tape UI state** → **Generate** → mutation **add-tape** or **create-scenario** → Edge → Postgres → **invalidate** queries → UI updates.
+**Data flow:** User input → **tape UI state** → **Generate** → mutation **add-tape** or **create-scenario** → Edge → Postgres → **invalidate** queries → UI updates. **Edit/delete:** confirmation (delete) → **update-tape** / **delete-tape** → same invalidation rules; **rollback** optimistic state on failure.
 
 ### File Organization Patterns
 
@@ -503,13 +511,14 @@ caution-bmad/
 **Functional requirements:**
 
 - **Tape through library and sharing:** Mapped in **Requirements to Structure Mapping**; FR15–FR18 covered by **`list-scenarios`** + `features/library`.
+- **Edit/delete (FR29–FR32):** Covered by **`update-tape`** / **`delete-tape`** Edge handlers, scenario feature UI, and **delete confirmation** before calling delete (FR32).
 - **Gaps:** None identified that block starting implementation; **exact** REST paths and DTO fields are finalized in API implementation.
 
 **Non-functional requirements:**
 
 - **Performance:** Addressed by tape spike priority, Edge-only writes with validation, TanStack caching.
 - **Security:** Non-guessable slugs (implementation detail in Edge), no service role in client, rate/length limits in Edge.
-- **Reliability:** Idempotency/retry called out in decisions and patterns.
+- **Reliability:** Idempotency/retry called out in decisions and patterns; **edit/delete consistency** (no orphaned optimistic state) reflected in process patterns.
 
 ### Implementation Readiness Validation
 
@@ -582,5 +591,5 @@ caution-bmad/
 **First implementation priority:**
 
 1. `npm create vite@latest web -- --template react-ts` then Tailwind v4 per Starter Template Evaluation.
-2. Supabase project: migrations for `scenarios` / `tapes`, then Edge Functions (`create-scenario`, `get-scenario-by-slug`, `add-tape`, `list-scenarios`).
+2. Supabase project: migrations for `scenarios` / `tapes`, then Edge Functions (`create-scenario`, `get-scenario-by-slug`, `add-tape`, `update-tape`, `delete-tape`, `list-scenarios`).
 3. **TapeRenderer** spike before polishing library UX.

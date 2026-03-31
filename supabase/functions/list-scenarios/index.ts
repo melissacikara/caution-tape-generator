@@ -5,6 +5,7 @@ import { z } from 'https://esm.sh/zod@3.23.8'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapScenario } from '../_shared/map.ts'
+import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
   slugs: z.array(z.string().min(1).max(128)).max(50),
@@ -27,7 +28,7 @@ serve(async (req) => {
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    return jsonError('VALIDATION_ERROR', parsed.error.flatten().toString(), 400)
+    return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')

@@ -51,9 +51,15 @@ FR25: Tapes added by any user via a shared link are persisted to the scenario im
 FR26: The system presents a fully functional, mobile-responsive layout across all views
 FR27: The homepage prominently presents the tape creator as the primary element
 FR28: The ADD button remains pinned and visible while scrolling through a scenario's tape stack
+FR29: Users can edit an existing tape from the scenario view (including changing text and/or color) and see the updated tape in the stack immediately after saving
+FR30: Users can delete a tape from a scenario; the tape is removed for everyone with access to that scenario
+FR31: Edit and delete are available to anyone who can open the scenario via its shareable URL — the same anonymous, link-based access model as viewing and adding tapes (no per-tape owner or role in MVP)
+FR32: Before a tape is permanently deleted, the system requires an explicit confirmation step (e.g. modal or bottom sheet). Confirmation reduces accidental loss; it is not authentication and does not restrict who may delete (still anyone with the scenario link)
 ```
 
 ### NonFunctional Requirements
+
+Authoritative detail: `prd.md` § Non-Functional Requirements. Summary below for epic traceability.
 
 ```
 NFR1: Tape preview renders in real time as the user types — perceptible lag between keystroke and visual update is a defect
@@ -66,13 +72,17 @@ NFR7: No authentication credentials, payment data, or sensitive user data is han
 NFR8: Scenarios and tapes are never lost — persistence is the core product promise
 NFR9: A confirmed tape is immediately saved and visible to anyone with the scenario link
 NFR10: The app handles poor mobile connections gracefully — a failed tape submission must not result in data loss
+NFR11: Destructive actions use confirmation (see FR32) so a stray tap does not remove a tape; copy stays short and in voice with the rest of the app
+NFR12: Link possession implies full edit/delete for any holder of the scenario URL; no per-tape author, audit trail, or permission tier in MVP
+NFR13: Future tightening (e.g. ownership-based edit/delete, soft-delete/undo) would require explicit product scope — not assumed for MVP
+NFR14: Edits and deletes take effect immediately for everyone with the scenario link; a failed edit or delete must not leave the UI and stored state inconsistent
 ```
 
 ### Additional Requirements
 
 ```
 - **Starter template (Epic 1 / first frontend story):** Scaffold client with Vite `react-ts` template (`npm create vite@latest web -- --template react-ts`), add Tailwind CSS v4 via `@tailwindcss/vite` per current docs; pin exact package versions at init; Node version per Vite/npm requirements (e.g. 20.19+ or 22.12+ as applicable).
-- **Backend:** Supabase PostgreSQL as system of record; Supabase Edge Functions as the only server-side entry for listing scenarios, creating scenarios, reading scenario by slug, and adding tapes — no direct browser writes with privileged DB roles.
+- **Backend:** Supabase PostgreSQL as system of record; Supabase Edge Functions as the only server-side entry for listing scenarios, creating scenarios, reading scenario by slug, adding tapes, **updating tapes, and deleting tapes** — no direct browser writes with privileged DB roles.
 - **Hosting:** Vercel for the Vite/React SPA (`web/`); Supabase hosts DB and Edge Functions; remain on free tiers until usage forces a change.
 - **Identity:** No end-user authentication; access control is possession of non-guessable scenario slug plus server-side limits (rate limit, max text length).
 - **Client stack:** React, TypeScript, Tailwind v4, React Router (v7 line) for `/`, library, `/s/:slug` (or agreed paths), TanStack Query for server state, retries, cache invalidation after mutations.
@@ -84,7 +94,7 @@ NFR10: The app handles poor mobile connections gracefully — a failed tape subm
 - **Tape rendering:** Choose DOM/SVG vs canvas (or hybrid) with tradeoffs for performance, maintainability, and accessibility — canvas requires parallel accessible text strategy (e.g. aria-label / non-image-only content).
 - **Observability:** Supabase dashboard + Vercel logs/analytics on free tier for MVP; optional GitHub Actions for lint/test — not blocking.
 - **Naming consistency:** PostgreSQL tables/columns snake_case; JSON HTTP fields camelCase; Edge function entry files kebab-case; TanStack Query key factory pattern; plural resource nouns in URLs where applicable.
-- **Implementation sequence (architecture):** (1) Supabase project + schema + migrations + slug strategy, (2) Edge Functions for create scenario, get by slug, add tape, list scenarios, (3) Vite app + routing + TanStack Query to Edge, (4) TapeRenderer spike until performance and a11y bar met, (5) Polish: optimistic UI, skeleton loading, focus management per UX.
+- **Implementation sequence (architecture):** (1) Supabase project + schema + migrations + slug strategy, (2) Edge Functions for create scenario, get by slug, add tape, **update tape, delete tape**, list scenarios, (3) Vite app + routing + TanStack Query to Edge, (4) TapeRenderer spike until performance and a11y bar met, (5) Polish: optimistic UI, skeleton loading, focus management per UX, **edit/delete mutations with rollback**.
 - **Deferred post-MVP:** Supabase Realtime for live list updates; image export pipeline; Redis; paid tiers only if needed.
 ```
 
@@ -109,6 +119,8 @@ UX-DR15: Empty states: first-visit homepage = CAUTION + cursor only; library wit
 UX-DR16: Responsive: mobile-first; centered max width `max-w-[480px]` default, `max-w-[640px]` at `md+`; scenario library 1→2 columns only at `sm`; sizing via rem/Tailwind — no hover-only interactions.
 UX-DR17: Accessibility WCAG 2.1 AA target: verify contrast (bump text-secondary to #999 if body audit fails); 44×44px minimum interactive targets; full keyboard navigation without traps; 2px yellow focus outline on focusable elements; semantic `<button>`, `<a>`, `<input>`, `<nav>`; aria-labels on icon-only controls; when opening tape creator from scenario, move focus to input; cursor blink is only intentional motion.
 UX-DR18: Adaptive homepage: users with no scenarios see tape creator first; users with existing scenarios see scenario library as home — preserves first-time "CAUTION:" moment and returning-user access to content.
+UX-DR19: Per-tape edit and delete affordances on each row in scenario view; same anonymous link-based capability as add (FR29–FR31).
+UX-DR20: DeleteConfirmSheet (or modal): explicit confirmation before permanent delete (FR32); short on-brand copy; Cancel/Confirm; focus management on dismiss — safety against stray taps, not authentication.
 ```
 
 ### FR Coverage Map
@@ -141,6 +153,10 @@ FR25: Epic 2 — Shared-link adds persist immediately
 FR26: Epic 4 — Mobile-responsive layout across all views
 FR27: Epic 1 + Epic 3 — Homepage centers tape creator; adaptive home when scenarios exist
 FR28: Epic 2 — ADD button pinned while scrolling tape stack
+FR29: Epic 2 — Edit tape from scenario view (text/color); stack updates after save
+FR30: Epic 2 — Delete tape; removed for all viewers with scenario link
+FR31: Epic 2 — Edit/delete available to anyone with shareable URL (no per-tape roles in MVP)
+FR32: Epic 2 — Explicit confirmation before permanent delete (modal or bottom sheet; not auth)
 
 ## Epic List
 
@@ -152,9 +168,9 @@ Users can open the app, type, and see a live industrial caution tape (diagonal s
 
 ### Epic 2: Shared scenarios and persistent tapes
 
-Users can create named scenarios, receive shareable URLs, open scenarios without accounts, view a scrollable tape stack, add tapes with a pinned ADD control, and rely on durable storage so links keep working. Implements Supabase data model, Edge Functions, routing by slug, mutations with validation/limits/idempotency patterns, and optimistic/error UX aligned with architecture.
+Users can create named scenarios, receive shareable URLs, open scenarios without accounts, view a scrollable tape stack, add tapes with a pinned ADD control, **edit or delete any tape from the scenario view** (same link-based rules as add, with **confirm-before-delete**), and rely on durable storage so links keep working. Implements Supabase data model, Edge Functions, routing by slug, mutations with validation/limits/idempotency patterns, and optimistic/error UX aligned with architecture.
 
-**FRs covered:** FR2, FR9, FR10, FR11, FR12, FR13, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR28.
+**FRs covered:** FR2, FR9, FR10, FR11, FR12, FR13, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR28, **FR29, FR30, FR31, FR32**.
 
 ### Epic 3: Scenario library and adaptive home
 
@@ -164,9 +180,9 @@ Returning users see a scenario library with provocative cards (name + tape count
 
 ### Epic 4: Polished, resilient, inclusive experience
 
-Cross-cutting quality: responsive behavior across all surfaces (FR26), performance and reliability expectations from the PRD, graceful handling of slow/failed saves, and WCAG 2.1 AA–oriented accessibility (focus, keyboard, semantics, contrast, tape content exposed to assistive technology). Closes remaining UX-DR gaps not fully satisfied in Epics 1–3.
+Cross-cutting quality: responsive behavior across all surfaces (FR26), performance and reliability expectations from the PRD, graceful handling of slow/failed saves (including **failed edit/delete** and consistency with server state per NFR14), and WCAG 2.1 AA–oriented accessibility (focus, keyboard, semantics, contrast, tape content exposed to assistive technology, **including delete confirmation focus**). Closes remaining UX-DR gaps not fully satisfied in Epics 1–3.
 
-**FRs covered:** FR26 (primary); explicit alignment with NFR1–NFR10 and remaining UX design requirements as consolidated in the requirements inventory.
+**FRs covered:** FR26 (primary); explicit alignment with NFR1–NFR14 and remaining UX design requirements as consolidated in the requirements inventory.
 
 ---
 
@@ -312,11 +328,11 @@ So that I can separate creative confirmation from later sharing actions (local c
 
 ## Epic 2: Shared scenarios and persistent tapes
 
-Users can create named scenarios, receive shareable URLs, open scenarios without accounts, view a scrollable tape stack, add tapes with a pinned ADD control, and rely on durable storage so links keep working. Implements Supabase data model, Edge Functions, routing by slug, mutations with validation/limits/idempotency patterns, and optimistic/error UX aligned with architecture.
+Users can create named scenarios, receive shareable URLs, open scenarios without accounts, view a scrollable tape stack, add tapes with a pinned ADD control, **edit or delete tapes** (with **delete confirmation** per FR32), and rely on durable storage so links keep working. Implements Supabase data model, Edge Functions, routing by slug, mutations with validation/limits/idempotency patterns, and optimistic/error UX aligned with architecture.
 
-**FRs covered:** FR2, FR9, FR10, FR11, FR12, FR13, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR28.
+**FRs covered:** FR2, FR9, FR10, FR11, FR12, FR13, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR28, FR29, FR30, FR31, FR32.
 
-**Relevant NFRs / UX-DRs:** NFR5–NFR10; UX-DR9, UX-DR10, UX-DR12–UX-DR14; architecture API/error/CORS/idempotency rules.
+**Relevant NFRs / UX-DRs:** NFR5–NFR14; UX-DR9, UX-DR10, UX-DR12–UX-DR14, **UX-DR19, UX-DR20**; architecture API/error/CORS/idempotency rules.
 
 ### Story 2.1: Create database schema for scenarios and tapes with non-guessable public slugs
 
@@ -335,7 +351,7 @@ So that persistence and share links are correct from day one (FR23, NFR6).
 **When** stored,
 **Then** color and text fields support the maximum lengths enforced at the API layer (coordinated with Story 2.2).
 
-### Story 2.2: Implement Edge Functions for create-scenario, get-scenario-by-slug, and add-tape
+### Story 2.2: Implement Edge Functions for create-scenario, get-scenario-by-slug, and add-tape (update/delete in Story 2.9)
 
 As a user,
 I want the server to validate and persist my scenarios and tapes safely,
@@ -476,6 +492,61 @@ So that contributors and creators can use real devices during development and pr
 **When** issues occur,
 **Then** logs are accessible via Supabase/Vercel dashboards at least at a basic level (no paid APM required).
 
+### Story 2.9: Implement Edge Functions for update-tape and delete-tape
+
+As a contributor,
+I want the server to apply tape edits and removals safely,
+So that anyone with the scenario link can change content without breaking anonymous sharing rules (FR29, FR30, FR31, NFR12).
+
+**Acceptance Criteria:**
+
+**Given** architecture patterns from add-tape,
+**When** update-tape and delete-tape Edge Functions are invoked with valid scenario context (e.g. slug + tape id),
+**Then** payloads are validated (Zod or equivalent), text/color limits match add-tape, and SQL uses snake_case with camelCase HTTP boundary,
+**And** errors return `{ "error": { "code", "message" } }` with correct HTTP status.
+
+**Given** FR31,
+**When** a client holds a valid scenario slug,
+**Then** edit and delete succeed without authentication — same trust model as add-tape.
+
+**Given** delete-tape,
+**When** the server applies removal,
+**Then** the tape row is gone for subsequent get-scenario-by-slug responses and list queries stay consistent.
+
+**Given** NFR14,
+**When** an update or delete fails at the server,
+**Then** the response allows the client to reconcile UI without silent partial state (documented error codes for inline retry).
+
+### Story 2.10: Edit and delete tapes in scenario view with DeleteConfirmSheet
+
+As a contributor,
+I want to fix typos or remove a tape from the stack,
+So that the group can curate jokes in the moment (FR29–FR32, UX-DR19, UX-DR20).
+
+**Acceptance Criteria:**
+
+**Given** I am viewing a scenario with at least one tape,
+**When** I choose edit on a tape row,
+**Then** the tape creator opens in overlay/state with text and color pre-filled (same shell as add per UX),
+**And** on save, the stack shows the updated tape immediately (optimistic or confirmed) and TanStack Query cache stays consistent (FR29).
+
+**Given** I choose delete on a tape row,
+**When** the delete affordance is activated,
+**Then** **DeleteConfirmSheet** (or modal) opens with short industrial copy and Cancel + Delete actions — **no API call until Confirm** (FR32, UX-DR20).
+
+**Given** I confirm delete,
+**When** the mutation succeeds,
+**Then** the tape disappears from the stack for me and anyone else with the link (FR30),
+**And** on failure I see an inline error and the tape remains or UI reverts to server state (NFR14).
+
+**Given** FR31,
+**When** any participant with the link edits or deletes,
+**Then** the same rules apply — no ownership UI in MVP.
+
+**Given** accessibility (baseline; Epic 4 hardens),
+**When** the confirmation sheet opens,
+**Then** focus moves into the dialog/sheet and Cancel restores a sensible focus target (UX-DR20).
+
 ---
 
 ## Epic 3: Scenario library and adaptive home
@@ -563,9 +634,9 @@ So that navigation stays shallow and predictable (FR14, UX-DR14).
 
 ## Epic 4: Polished, resilient, inclusive experience
 
-Cross-cutting quality: responsive behavior across all surfaces (FR26), performance and reliability expectations from the PRD, graceful handling of slow/failed saves, and WCAG 2.1 AA–oriented accessibility (focus, keyboard, semantics, contrast, tape content exposed to assistive technology). Closes remaining UX-DR gaps not fully satisfied in Epics 1–3.
+Cross-cutting quality: responsive behavior across all surfaces (FR26), performance and reliability expectations from the PRD, graceful handling of slow/failed saves (including **edit/delete** failures per NFR14), and WCAG 2.1 AA–oriented accessibility (focus, keyboard, semantics, contrast, tape content exposed to assistive technology, **delete confirmation focus**). Closes remaining UX-DR gaps not fully satisfied in Epics 1–3.
 
-**FRs covered:** FR26 (primary); NFR1–NFR10; UX-DR11–UX-DR17 as consolidated pass where not already fully satisfied.
+**FRs covered:** FR26 (primary); NFR1–NFR14; UX-DR11–UX-DR20 as consolidated pass where not already fully satisfied.
 
 ### Story 4.1: Responsive layout verification across all primary routes
 
@@ -605,7 +676,7 @@ So that nobody fumbles in front of friends (NFR1–NFR3, FR26).
 
 As a user,
 I want saves to feel trustworthy,
-So that jokes don’t disappear (NFR8–NFR10, UX-DR12).
+So that jokes don’t disappear (NFR8–NFR10, NFR14, UX-DR12).
 
 **Acceptance Criteria:**
 
@@ -613,6 +684,10 @@ So that jokes don’t disappear (NFR8–NFR10, UX-DR12).
 **When** mutations fail or time out,
 **Then** inline errors appear and drafts are preserved across create/add flows,
 **And** retries do not create duplicate tapes (verified by test or manual protocol).
+
+**Given** edit or delete mutations,
+**When** the server rejects or the network fails,
+**Then** the UI reverts to server state or shows inline error — **no inconsistent tape row** versus persisted data (NFR14).
 
 ### Story 4.4: Accessibility audit and fixes to WCAG 2.1 AA baseline
 
@@ -622,7 +697,7 @@ So that friends aren’t excluded (UX-DR17, UX-DR3).
 
 **Acceptance Criteria:**
 
-**Given** representative flows (create tape, create scenario, view scenario, add tape, browse library),
+**Given** representative flows (create tape, create scenario, view scenario, add tape, **edit tape**, **delete tape with confirmation**, browse library),
 **When** tested with keyboard only,
 **Then** focus order is logical and no traps occur,
 **And** focus rings meet the 2px yellow outline spec.
@@ -640,7 +715,7 @@ So that friends aren’t excluded (UX-DR17, UX-DR3).
 
 As a product owner,
 I want proportionate protections on shared links,
-So that a small tool doesn’t become trivially abusable (NFR5–NFR7, architecture).
+So that a small tool doesn’t become trivially abusable (NFR5–NFR7, NFR12–NFR13, architecture).
 
 **Acceptance Criteria:**
 
@@ -648,6 +723,10 @@ So that a small tool doesn’t become trivially abusable (NFR5–NFR7, architect
 **When** reviewing implementation,
 **Then** no PII is collected/stored beyond operational logs,
 **And** scenario slugs remain non-enumerable in practice (spot-check randomness approach).
+
+**Given** NFR12,
+**When** reviewing edit/delete behavior,
+**Then** link possession grants full tape modification — documented as intentional for MVP, with NFR13 noted for any future ownership/auth work.
 
 **Given** Edge limits,
 **When** exercising rate limits and max length,

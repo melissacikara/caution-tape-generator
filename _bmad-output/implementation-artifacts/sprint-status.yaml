@@ -35,45 +35,45 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: "2026-03-29T20:45:00Z"
-last_updated: "2026-03-30T22:00:00Z"
+last_updated: "2026-03-30T21:30:00Z"
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-scaffold-the-web-client-with-vite-react-typescript-and-tailwind-v4: done
   1-2-define-industrial-design-tokens-and-load-bebas-neue-and-dm-mono: done
   1-3-implement-taperenderer-for-stripes-repeating-text-scaling-and-color: done
   1-4-build-tapecreatorpanel-with-live-preview-wired-to-typing: done
   1-5-add-colorpickerswatch-with-spectrum-selection-and-labeled-value: done
-  1-6-add-appheader-and-home-layout-with-command-center-structure: review
-  1-7-implement-generate-locked-tape-state-and-reset: review
+  1-6-add-appheader-and-home-layout-with-command-center-structure: done
+  1-7-implement-generate-locked-tape-state-and-reset: done
   epic-1-retrospective: optional
 
-  epic-2: in-progress
-  2-1-create-database-schema-for-scenarios-and-tapes-with-non-guessable-public-slugs: review
-  2-2-implement-edge-functions-for-create-scenario-get-scenario-by-slug-and-add-tape: review
-  2-3-add-shared-api-client-query-keys-and-tanstack-query-setup: review
-  2-4-configure-routing-for-home-and-scenario-by-slug-with-scenario-loading-ux: review
-  2-5-create-scenario-from-the-homepage-after-generate-and-surface-the-share-url: review
-  2-6-build-scenario-view-with-tapestack-tape-count-and-pinned-add: review
-  2-7-implement-add-tape-flow-from-scenario-with-optimistic-ui-and-failure-handling: review
-  2-8-wire-cors-environment-variables-and-deployment-facing-configuration: review
+  epic-2: done
+  2-1-create-database-schema-for-scenarios-and-tapes-with-non-guessable-public-slugs: done
+  2-2-implement-edge-functions-for-create-scenario-get-scenario-by-slug-and-add-tape: done
+  2-3-add-shared-api-client-query-keys-and-tanstack-query-setup: done
+  2-4-configure-routing-for-home-and-scenario-by-slug-with-scenario-loading-ux: done
+  2-5-create-scenario-from-the-homepage-after-generate-and-surface-the-share-url: done
+  2-6-build-scenario-view-with-tapestack-tape-count-and-pinned-add: done
+  2-7-implement-add-tape-flow-from-scenario-with-optimistic-ui-and-failure-handling: done
+  2-8-wire-cors-environment-variables-and-deployment-facing-configuration: done
   epic-2-retrospective: optional
 
-  epic-3: in-progress
-  3-1-implement-list-scenarios-edge-function-and-scenarios-list-query: review
-  3-2-build-scenariolibrary-with-scenariocard-grid-and-provocative-copy: review
-  3-3-implement-adaptive-homepage-creator-vs-library: review
-  3-4-add-back-navigation-and-consistent-library-entry-from-scenario-view: review
+  epic-3: done
+  3-1-implement-list-scenarios-edge-function-and-scenarios-list-query: done
+  3-2-build-scenariolibrary-with-scenariocard-grid-and-provocative-copy: done
+  3-3-implement-adaptive-homepage-creator-vs-library: done
+  3-4-add-back-navigation-and-consistent-library-entry-from-scenario-view: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-responsive-layout-verification-across-all-primary-routes: backlog
-  4-2-performance-pass-for-load-and-interaction-budgets: backlog
-  4-3-reliability-hardening-for-flaky-networks-and-mutation-failures: backlog
-  4-4-accessibility-audit-and-fixes-to-wcag-2-1-aa-baseline: backlog
-  4-5-security-and-abuse-posture-review-for-anonymous-sharing: backlog
+  epic-4: done
+  4-1-responsive-layout-verification-across-all-primary-routes: done
+  4-2-performance-pass-for-load-and-interaction-budgets: done
+  4-3-reliability-hardening-for-flaky-networks-and-mutation-failures: done
+  4-4-accessibility-audit-and-fixes-to-wcag-2-1-aa-baseline: done
+  4-5-security-and-abuse-posture-review-for-anonymous-sharing: done
   epic-4-retrospective: optional

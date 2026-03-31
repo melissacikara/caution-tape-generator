@@ -1,6 +1,6 @@
 # Story 2.1: Create database schema for scenarios and tapes with non-guessable public slugs
 
-Status: review
+Status: done
 
 <!-- Ultimate context engine analysis completed — comprehensive developer guide created. -->
 
@@ -54,3 +54,4 @@ Composer (Cursor agent)
 ### Change Log
 
 - **2026-03-30:** Story 2.1 — initial schema migration + Supabase README.
+- **2026-03-30:** Status → `done`; Epic 2 review follow-up fixes landed (see other Story 2.x work); sprint tracking synced.

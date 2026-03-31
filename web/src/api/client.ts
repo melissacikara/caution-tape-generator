@@ -3,8 +3,12 @@ import type {
   AddTapeResponse,
   CreateScenarioBody,
   CreateScenarioResponse,
+  DeleteTapeBody,
+  DeleteTapeResponse,
   GetScenarioResponse,
   ListScenariosResponse,
+  UpdateTapeBody,
+  UpdateTapeResponse,
 } from './types'
 
 export class ApiError extends Error {
@@ -91,6 +95,22 @@ export async function addTape(body: AddTapeBody): Promise<AddTapeResponse> {
     body: JSON.stringify(body),
   })
   return parseJson<AddTapeResponse>(res)
+}
+
+export async function updateTape(body: UpdateTapeBody): Promise<UpdateTapeResponse> {
+  const res = await supabaseFetch('update-tape', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<UpdateTapeResponse>(res)
+}
+
+export async function deleteTape(body: DeleteTapeBody): Promise<DeleteTapeResponse> {
+  const res = await supabaseFetch('delete-tape', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<DeleteTapeResponse>(res)
 }
 
 export async function listScenarios(slugs: string[]): Promise<ListScenariosResponse> {

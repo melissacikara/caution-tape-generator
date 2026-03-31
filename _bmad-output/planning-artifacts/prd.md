@@ -1,10 +1,15 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped, step-07-project-type, step-08-scoping, step-09-functional, step-10-nonfunctional, step-11-polish, step-12-complete]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped, step-07-project-type, step-08-scoping, step-09-functional, step-10-nonfunctional, step-11-polish, step-12-complete, step-e-01-discovery, step-e-02-review, step-e-03-edit]
 workflowComplete: true
 completedAt: '2026-03-29'
+lastEdited: '2026-03-30'
+editHistory:
+  - date: '2026-03-30'
+    changes: 'Tape edit/delete FRs; security/reliability; PRD validation report; FR32 delete confirmation (UX safety, not auth).'
 inputDocuments:
   - _bmad-output/brainstorming/brainstorming-session-2026-03-29-1930.md
 workflowType: 'prd'
+workflow: 'edit'
 documentCounts:
   briefs: 0
   research: 0
@@ -15,7 +20,7 @@ classification:
   domain: Social / Consumer Entertainment
   complexity: low
   projectContext: greenfield
-  notes: Dynamic SPA with real-time preview and link-based sharing. Dual user flows - Creator (homepage entry) and Contributor (shared link entry).
+  notes: Dynamic SPA with real-time preview and link-based sharing. Dual user flows - Creator (homepage entry) and Contributor (shared link entry). Scenario link grants view/add/edit/delete (open model in MVP).
 ---
 
 # Product Requirements Document — Caution Tape Generator
@@ -27,7 +32,7 @@ classification:
 
 The Caution Tape Generator is a personal web tool for creating, collecting, and sharing absurdist fake caution tape warnings. Built for casual social use — primarily around in-person sessions with friends — it solves a simple problem: funny riffing sessions are ephemeral. The product gives them a persistent home.
 
-The core mechanic is deliberately narrow: a user types any text, and the tool renders it as a realistic-looking caution tape image in the format **CAUTION: [text]**. Warnings are grouped into user-created *scenarios* (thematic collections). Anyone with a scenario link can view and add to it. No accounts, no friction.
+The core mechanic is deliberately narrow: a user types any text, and the tool renders it as a realistic-looking caution tape image in the format **CAUTION: [text]**. Warnings are grouped into user-created *scenarios* (thematic collections). Anyone with a scenario link can view, add, edit, or delete tapes in that scenario. No accounts, no friction.
 
 The intended audience is the creator and a small, known circle of friends — not the general public. The product is not designed for discoverability, virality, or moderation at scale.
 
@@ -91,7 +96,7 @@ Personal project with no commercial goals. Success is personal utility — the a
 - Tape stack view inside scenario — vertical scroll, pinned ADD button
 - Anonymous — no accounts, no names
 - Persistent — scenarios and tapes saved permanently
-- Shareable URL per scenario — anyone with the link can view and add
+- Shareable URL per scenario — anyone with the link can view, add, edit, and delete tapes (no per-user ownership in MVP)
 - Mobile-responsive layout
 
 **Resources:** Solo developer with AI assistance (BMAD workflow). Tape rendering approach (CSS/Canvas/SVG) to be determined in architecture phase.
@@ -132,7 +137,9 @@ He sees a vertical stack of caution tapes. He reads them top to bottom, laughing
 
 He didn't create an account. He didn't choose a scenario name. He was never shown the homepage. He was just in.
 
-**Capabilities revealed:** Scenario view (link entry point), tape stack display, pinned ADD button, tape creator accessible from within scenario, color picker, tape persistence after creation.
+He notices a typo on a tape he added — he edits it in place. Someone else's joke is too spicy for the thread — they delete it. Same rules for everyone: link access is all you need.
+
+**Capabilities revealed:** Scenario view (link entry point), tape stack display, pinned ADD button, tape creator accessible from within scenario, color picker, tape persistence after creation, edit and delete for any tape in the scenario.
 
 ---
 
@@ -166,6 +173,10 @@ At no point does she need to log in, search for her content, or remember a usern
 | Scenario cards (name + tape count) | Journey 3 |
 | Multiple scenarios per creator | Journey 3 |
 | No authentication required anywhere | All journeys |
+| Edit tape (text and/or color) from scenario view | Journey 2 |
+| Delete tape from scenario view | Journey 2 |
+| Edit/delete require only scenario link access (same as add) | Journey 2 |
+| Delete confirmation before permanent removal | Journey 2 |
 
 ## Web App Specific Requirements
 
@@ -235,6 +246,13 @@ Dynamic web app with persistent storage — scenarios and tapes must survive ses
 - **FR21:** Users can add tapes to any scenario they access via a shareable URL
 - **FR22:** The system does not require authentication for any action anywhere in the app
 
+### Tape Editing & Deletion
+
+- **FR29:** Users can edit an existing tape from the scenario view (including changing text and/or color) and see the updated tape in the stack immediately after saving
+- **FR30:** Users can delete a tape from a scenario; the tape is removed for everyone with access to that scenario
+- **FR31:** Edit and delete are available to anyone who can open the scenario via its shareable URL — the same anonymous, link-based access model as viewing and adding tapes (no per-tape owner or role in MVP)
+- **FR32:** Before a tape is permanently deleted, the system requires an explicit confirmation step (e.g. modal or bottom sheet). Confirmation reduces accidental loss; it is not authentication and does not restrict who may delete (still anyone with the scenario link)
+
 ### Persistence
 
 - **FR23:** The system permanently stores all scenarios and their tapes
@@ -249,6 +267,10 @@ Dynamic web app with persistent storage — scenarios and tapes must survive ses
 
 ## Non-Functional Requirements
 
+### Usability
+
+- Destructive actions use confirmation (see FR32) so a stray tap does not remove a tape; keep copy short and in voice with the rest of the app
+
 ### Performance
 
 - Tape preview renders in real time as the user types — perceptible lag between keystroke and visual update is a defect
@@ -261,9 +283,12 @@ Dynamic web app with persistent storage — scenarios and tapes must survive ses
 - No personally identifiable information is collected or stored — users are fully anonymous
 - Scenario URLs use non-guessable slugs (not sequential IDs) to prevent casual enumeration
 - No authentication credentials, payment data, or sensitive user data is handled at any point
+- **Link access = full edit/delete:** Anyone who holds a scenario URL can edit or delete any tape in that scenario. There is no per-tape author, audit trail, or permission tier in MVP. This matches the low-trust, friends-in-the-room use case; the product is not designed to prevent abuse by someone who has the link.
+- **Future tightening:** If requirements change (e.g. only original creator can edit/delete, or time-limited editing, or soft-delete/undo), the product must revisit authentication, ownership metadata, or confirmation flows — not assumed for MVP.
 
 ### Reliability
 
 - Scenarios and tapes are never lost — persistence is the core product promise
 - A confirmed tape is immediately saved and visible to anyone with the scenario link
+- Edits and deletes take effect immediately for everyone with the scenario link; a failed edit or delete must not leave the UI and stored state inconsistent
 - The app handles poor mobile connections gracefully — a failed tape submission must not result in data loss

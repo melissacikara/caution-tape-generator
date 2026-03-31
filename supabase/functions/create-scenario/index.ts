@@ -5,6 +5,7 @@ import { z } from 'https://esm.sh/zod@3.23.8'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapScenario, mapTape } from '../_shared/map.ts'
+import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(500),
@@ -33,7 +34,7 @@ serve(async (req) => {
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    return jsonError('VALIDATION_ERROR', parsed.error.flatten().toString(), 400)
+    return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
   const url = Deno.env.get('SUPABASE_URL')
@@ -66,10 +67,11 @@ serve(async (req) => {
         tape_text: firstTape.tapeText,
         color: firstTape.color,
       })
-      .select('id, scenario_id, tape_text, color, created_at')
+      .select('id, scenario_id, tape_text, color, created_at, updated_at')
       .single()
 
     if (tErr || !tape) {
+      await supabase.from('scenarios').delete().eq('id', scenario.id)
       return jsonError('DATABASE_ERROR', tErr?.message ?? 'Tape insert failed', 500)
     }
     tapes.push(mapTape(tape))

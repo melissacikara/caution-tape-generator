@@ -42,7 +42,7 @@ serve(async (req) => {
 
   const { data: tapeRows, error: tErr } = await supabase
     .from('tapes')
-    .select('id, scenario_id, tape_text, color, created_at')
+    .select('id, scenario_id, tape_text, color, created_at, updated_at')
     .eq('scenario_id', scenario.id)
     .order('created_at', { ascending: false })
 
