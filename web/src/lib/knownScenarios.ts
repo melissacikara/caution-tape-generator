@@ -17,3 +17,8 @@ export function rememberScenarioSlug(slug: string): void {
   s.add(slug.trim())
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...s]))
 }
+
+export function forgetScenarioSlug(slug: string): void {
+  const updated = getKnownScenarioSlugs().filter((s) => s !== slug.trim())
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+}

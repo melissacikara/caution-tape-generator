@@ -3,10 +3,14 @@ import type {
   AddTapeResponse,
   CreateScenarioBody,
   CreateScenarioResponse,
+  DeleteScenarioBody,
+  DeleteScenarioResponse,
   DeleteTapeBody,
   DeleteTapeResponse,
   GetScenarioResponse,
   ListScenariosResponse,
+  UpdateScenarioBody,
+  UpdateScenarioResponse,
   UpdateTapeBody,
   UpdateTapeResponse,
 } from './types'
@@ -111,6 +115,22 @@ export async function deleteTape(body: DeleteTapeBody): Promise<DeleteTapeRespon
     body: JSON.stringify(body),
   })
   return parseJson<DeleteTapeResponse>(res)
+}
+
+export async function updateScenario(body: UpdateScenarioBody): Promise<UpdateScenarioResponse> {
+  const res = await supabaseFetch('update-scenario', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<UpdateScenarioResponse>(res)
+}
+
+export async function deleteScenario(body: DeleteScenarioBody): Promise<DeleteScenarioResponse> {
+  const res = await supabaseFetch('delete-scenario', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<DeleteScenarioResponse>(res)
 }
 
 export async function listScenarios(slugs: string[]): Promise<ListScenariosResponse> {

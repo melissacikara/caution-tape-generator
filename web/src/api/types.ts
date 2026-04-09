@@ -62,6 +62,23 @@ export type DeleteTapeResponse = {
   ok: boolean
 }
 
+export type UpdateScenarioBody = {
+  scenarioSlug: string
+  name: string
+}
+
+export type UpdateScenarioResponse = {
+  scenario: ScenarioDto
+}
+
+export type DeleteScenarioBody = {
+  scenarioSlug: string
+}
+
+export type DeleteScenarioResponse = {
+  ok: true
+}
+
 export type ScenarioSummaryItem = {
   scenario: ScenarioDto
   tapeCount: number

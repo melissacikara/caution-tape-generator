@@ -16,7 +16,13 @@ export function AppHeader() {
         >
           ⚠ Caution Tape Generator
         </Link>
-        <nav aria-label="Main">
+        <nav aria-label="Main" className="flex items-center gap-5">
+          <Link
+            to="/about"
+            className="font-ui text-sm text-muted underline-offset-4 transition-colors hover:text-red-500 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            About
+          </Link>
           <Link
             to="/"
             state={{ library: true }}

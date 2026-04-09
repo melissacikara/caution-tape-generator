@@ -1,20 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 
 import {
   ApiError,
   addTape,
+  deleteScenario,
   deleteTape,
   getScenarioBySlug,
   isSupabaseConfigured,
+  updateScenario,
   updateTape,
 } from '../api/client'
 import { scenarioKeys } from '../api/queryKeys'
 import type { GetScenarioResponse, TapeDto } from '../api/types'
 import { DeleteConfirmSheet } from '../components/DeleteConfirmSheet'
 import { copyTextToClipboard } from '../lib/copyToClipboard'
-import { rememberScenarioSlug } from '../lib/knownScenarios'
+import { forgetScenarioSlug, rememberScenarioSlug } from '../lib/knownScenarios'
 import { ColorPickerSwatch } from '../tape/ColorPickerSwatch'
 import { TapeRenderer } from '../tape/TapeRenderer'
 
@@ -26,9 +28,11 @@ const DEFAULT_TAPE_COLOR = '#FFD000'
 
 export function ScenarioPage() {
   const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const configured = isSupabaseConfigured()
   const formId = useId()
+  const renameInputRef = useRef<HTMLInputElement>(null)
   const creatorTextRef = useRef<HTMLTextAreaElement>(null)
   const [addOpen, setAddOpen] = useState(false)
   /** Stable per “add tape” session so retries reuse the same server idempotency key. */
@@ -39,6 +43,9 @@ export function ScenarioPage() {
   const [editText, setEditText] = useState('')
   const [editColor, setEditColor] = useState(DEFAULT_TAPE_COLOR)
   const [tapeToDelete, setTapeToDelete] = useState<TapeDto | null>(null)
+  const [renamingScenario, setRenamingScenario] = useState(false)
+  const [renameText, setRenameText] = useState('')
+  const [confirmDeleteScenario, setConfirmDeleteScenario] = useState(false)
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined' || !slug) return ''
@@ -57,6 +64,15 @@ export function ScenarioPage() {
     })
     return () => cancelAnimationFrame(id)
   }, [addOpen, editTape])
+
+  /** Move focus into the rename input when rename mode opens. */
+  useEffect(() => {
+    if (!renamingScenario) return
+    const id = requestAnimationFrame(() => {
+      renameInputRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [renamingScenario])
 
   const scenarioQuery = useQuery({
     queryKey: slug ? scenarioKeys.bySlug(slug) : ['scenarios', 'invalid'],
@@ -197,6 +213,54 @@ export function ScenarioPage() {
     },
   })
 
+  const renameScenarioMutation = useMutation({
+    mutationFn: async (name: string) => {
+      if (!slug) throw new Error('Missing slug')
+      return updateScenario({ scenarioSlug: slug, name })
+    },
+    onMutate: async (name) => {
+      if (!slug) return
+      const key = scenarioKeys.bySlug(slug)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<GetScenarioResponse>(key)
+      if (previous) {
+        queryClient.setQueryData<GetScenarioResponse>(key, {
+          ...previous,
+          scenario: { ...previous.scenario, name },
+        })
+      }
+      return { previous }
+    },
+    onError: (_e, _v, ctx) => {
+      if (!slug) return
+      if (ctx?.previous) {
+        queryClient.setQueryData(scenarioKeys.bySlug(slug), ctx.previous)
+        setRenameText(ctx.previous.scenario.name)
+      }
+    },
+    onSettled: () => {
+      if (!slug) return
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.bySlug(slug) })
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+    },
+    onSuccess: () => {
+      setRenamingScenario(false)
+      setRenameText('')
+    },
+  })
+
+  const deleteScenarioMutation = useMutation({
+    mutationFn: async () => {
+      if (!slug) throw new Error('Missing slug')
+      return deleteScenario({ scenarioSlug: slug })
+    },
+    onSuccess: () => {
+      if (slug) forgetScenarioSlug(slug)
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+      navigate('/')
+    },
+  })
+
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   const copyShare = useCallback(async () => {
@@ -205,6 +269,24 @@ export function ScenarioPage() {
     setCopyStatus(ok ? 'copied' : 'failed')
     window.setTimeout(() => setCopyStatus('idle'), 2500)
   }, [shareUrl])
+
+  const openRenameScenario = useCallback((currentName: string) => {
+    setRenameText(currentName)
+    setRenamingScenario(true)
+    renameScenarioMutation.reset()
+  }, [renameScenarioMutation])
+
+  const closeRenameScenario = useCallback(() => {
+    setRenamingScenario(false)
+    setRenameText('')
+    renameScenarioMutation.reset()
+  }, [renameScenarioMutation])
+
+  const handleSaveRename = () => {
+    const t = renameText.trim()
+    if (t.length === 0) return
+    renameScenarioMutation.mutate(t)
+  }
 
   const openAddPanel = useCallback(() => {
     setEditTape(null)
@@ -312,13 +394,83 @@ export function ScenarioPage() {
       ? deleteMutation.error.message
       : deleteMutation.error?.message
 
+  const renameErr =
+    renameScenarioMutation.error instanceof ApiError
+      ? renameScenarioMutation.error.message
+      : renameScenarioMutation.error?.message
+
+  const deleteScenarioErr =
+    deleteScenarioMutation.error instanceof ApiError
+      ? deleteScenarioMutation.error.message
+      : deleteScenarioMutation.error?.message
+
   return (
     <main className="flex justify-center px-4 pb-40 pt-8">
       <div className="w-full max-w-[480px] md:max-w-[640px]">
         <header className="border-b border-border pb-4">
-          <h1 className="font-display text-2xl uppercase tracking-wide text-foreground">
-            {scenario.name}
-          </h1>
+          {renamingScenario ? (
+            <div className="space-y-2">
+              <label className="block font-ui text-xs text-muted" htmlFor={`${formId}-rename`}>
+                Scenario name
+              </label>
+              <input
+                ref={renameInputRef}
+                id={`${formId}-rename`}
+                value={renameText}
+                onChange={(e) => setRenameText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveRename()
+                  if (e.key === 'Escape') closeRenameScenario()
+                }}
+                maxLength={500}
+                className="w-full border border-border bg-surface-raised px-3 py-2 font-display text-xl uppercase tracking-wide text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
+              {renameErr ? (
+                <p className="font-ui text-xs text-red-400" role="alert">{renameErr}. Try again.</p>
+              ) : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={renameScenarioMutation.isPending || renameText.trim().length === 0}
+                  onClick={handleSaveRename}
+                  className="min-h-[36px] bg-accent px-4 font-ui text-xs font-semibold uppercase tracking-wide text-accent-text disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {renameScenarioMutation.isPending ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeRenameScenario}
+                  className="min-h-[36px] border border-border px-4 font-ui text-xs text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-start gap-3">
+              <h1 className="font-display text-2xl uppercase tracking-wide text-foreground">
+                {scenario.name}
+              </h1>
+              <div className="flex shrink-0 items-center gap-1 pt-1">
+                <button
+                  type="button"
+                  onClick={() => openRenameScenario(scenario.name)}
+                  className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label="Edit scenario name"
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteScenario(true)}
+                  className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-red-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label="Delete scenario"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
           <p className="mt-1 font-ui text-xs text-muted">
             {tapes.length} tape{tapes.length === 1 ? '' : 's'}
           </p>
@@ -386,6 +538,22 @@ export function ScenarioPage() {
           }}
           pending={deleteMutation.isPending}
           errorMessage={tapeToDelete && deleteErr ? deleteErr : null}
+        />
+
+        <DeleteConfirmSheet
+          open={confirmDeleteScenario}
+          title="Delete this scenario?"
+          description="This permanently removes the scenario and all its tapes for everyone with the link. This cannot be undone."
+          confirmLabel="Delete scenario"
+          onCancel={() => {
+            if (!deleteScenarioMutation.isPending) {
+              setConfirmDeleteScenario(false)
+              deleteScenarioMutation.reset()
+            }
+          }}
+          onConfirm={() => deleteScenarioMutation.mutate()}
+          pending={deleteScenarioMutation.isPending}
+          errorMessage={confirmDeleteScenario && deleteScenarioErr ? deleteScenarioErr : null}
         />
 
         <div
