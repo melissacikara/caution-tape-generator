@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 export type ColorPickerSwatchProps = {
   /** Current color, e.g. `#FFD000` */
@@ -31,6 +31,17 @@ export function ColorPickerSwatch({
 }: ColorPickerSwatchProps) {
   const id = useId()
   const display = normalizeHex(value)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Imperatively keep the DOM attribute in sync so mobile browsers
+  // (iOS Safari, Chrome for Android) read the correct value when the
+  // native color-picker sheet opens — they inspect the DOM attribute at
+  // open time, which can lag behind React's reconciliation.
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.value = display
+    }
+  }, [display])
 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
@@ -44,6 +55,7 @@ export function ColorPickerSwatch({
           aria-hidden
         />
         <input
+          ref={inputRef}
           id={id}
           type="color"
           value={display}
