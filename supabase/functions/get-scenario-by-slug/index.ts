@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
+import { extractUserId } from '../_shared/auth.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapScenario, mapTape } from '../_shared/map.ts'
@@ -19,6 +20,9 @@ serve(async (req) => {
     return jsonError('BAD_REQUEST', 'Query parameter slug is required', 400)
   }
 
+  // Auth wiring — userId available for Epic 2 permission checks; anonymous access unchanged
+  const _userId = await extractUserId(req)
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !key) {
@@ -29,7 +33,7 @@ serve(async (req) => {
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .select('id, name, public_slug, created_at, updated_at')
+    .select('id, name, public_slug, owner_id, created_at, updated_at')
     .eq('public_slug', slug)
     .maybeSingle()
 
@@ -42,7 +46,7 @@ serve(async (req) => {
 
   const { data: tapeRows, error: tErr } = await supabase
     .from('tapes')
-    .select('id, scenario_id, tape_text, color, created_at, updated_at')
+    .select('id, scenario_id, tape_text, color, author_id, created_at, updated_at')
     .eq('scenario_id', scenario.id)
     .order('created_at', { ascending: false })
 

@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 
+import { extractUserId } from '../_shared/auth.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapScenario, mapTape } from '../_shared/map.ts'
@@ -37,6 +38,8 @@ serve(async (req) => {
     return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
+  const userId = await extractUserId(req)
+
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!url || !key) {
@@ -49,8 +52,8 @@ serve(async (req) => {
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .insert({ name })
-    .select('id, name, public_slug, created_at, updated_at')
+    .insert({ name, ...(userId ? { owner_id: userId } : {}) })
+    .select('id, name, public_slug, owner_id, created_at, updated_at')
     .single()
 
   if (sErr || !scenario) {
@@ -66,8 +69,9 @@ serve(async (req) => {
         scenario_id: scenario.id,
         tape_text: firstTape.tapeText,
         color: firstTape.color,
+        ...(userId ? { author_id: userId } : {}),
       })
-      .select('id, scenario_id, tape_text, color, created_at, updated_at')
+      .select('id, scenario_id, tape_text, color, author_id, created_at, updated_at')
       .single()
 
     if (tErr || !tape) {

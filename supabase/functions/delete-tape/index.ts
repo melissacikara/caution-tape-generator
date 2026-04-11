@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 
+import { extractUserId } from '../_shared/auth.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
 import { formatZodError } from '../_shared/zod.ts'
@@ -30,6 +31,9 @@ serve(async (req) => {
   if (!parsed.success) {
     return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
+
+  // Auth wiring — userId available for Epic 2 permission checks; anonymous access unchanged
+  const _userId = await extractUserId(req)
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
