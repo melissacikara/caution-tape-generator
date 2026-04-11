@@ -72,6 +72,7 @@ export function TapeCreatorPanel({
               value={warningText}
               disabled={isLocked}
               onChange={(e) => setWarningText(e.target.value)}
+              maxLength={2000}
               className="min-w-[8ch] flex-1 bg-transparent font-display text-2xl uppercase leading-none tracking-wide text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised disabled:cursor-not-allowed disabled:opacity-60"
               aria-label={TAPE_INPUT_LABEL}
               autoComplete="off"

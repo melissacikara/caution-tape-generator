@@ -34,8 +34,11 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
+# PHASE 2 SPRINT — active branch: phase2
+# Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
+# Next up: story 1-4 (Epic 1), then 6-3 (Epic 6).
 generated: "2026-04-10"
-last_updated: "2026-04-11"
+last_updated: "2026-04-11"  # updated: story 6-3 review
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -46,9 +49,9 @@ development_status:
   # Architecturally foundational — must be completed before Epics 2, 4, and 5.
   epic-1: in-progress
   1-1-supabase-auth-setup-and-user-schema: done
-  1-2-magic-link-login-flow: backlog
-  1-3-login-gate-on-tape-and-scenario-creation: backlog
-  1-4-context-aware-ctas: backlog
+  1-2-magic-link-login-flow: done
+  1-3-login-gate-on-tape-and-scenario-creation: done
+  1-4-context-aware-ctas: done
   epic-1-retrospective: optional
 
   # ─── Epic 2: Ownership, Privacy & Public Safety ──────────────────────────────
@@ -93,6 +96,6 @@ development_status:
   epic-6: in-progress
   6-1-mobile-color-picker-bug-fix: done
   6-2-unified-color-preset-swatches: done
-  6-3-long-tape-text-support: backlog
+  6-3-long-tape-text-support: in-progress
   6-4-save-tape-to-camera-roll: backlog
   epic-6-retrospective: optional

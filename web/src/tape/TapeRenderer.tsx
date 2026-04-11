@@ -108,20 +108,17 @@ function TapeRendererInner({ text, color, state, className = '' }: TapeRendererP
 
   return (
     <div
-      className={`relative w-full max-w-full overflow-hidden border border-border ${isGenerated ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''} ${className}`}
+      className={`relative w-full max-w-full overflow-x-auto border border-border ${isGenerated ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''} ${className}`}
       role="img"
       aria-label={ariaLabel}
     >
-      <div
-        className="pointer-events-none absolute inset-0 z-0"
-        style={{ background: stripeBackground }}
-        aria-hidden
-      />
       <div
         className="relative z-10 flex w-max max-w-none flex-nowrap items-center px-3 py-3 font-display text-xl uppercase leading-none tracking-wide"
         style={{
           color: ink,
           minWidth: `${minWidthCh}ch`,
+          background: stripeBackground,
+          backgroundAttachment: 'local',
         }}
         aria-hidden
       >

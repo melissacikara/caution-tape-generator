@@ -498,7 +498,6 @@ export function ScenarioPage() {
                 text={tape.tapeText}
                 color={tape.color}
                 state="generated"
-                className="max-h-32 overflow-y-auto"
               />
               {isPersistedTape(tape) ? (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -570,6 +569,7 @@ export function ScenarioPage() {
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={3}
+                maxLength={2000}
                 className="w-full resize-y border border-border bg-surface-raised px-3 py-2 font-display text-lg uppercase tracking-wide text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
               />
               <div className="flex flex-wrap items-center gap-3">
@@ -583,7 +583,6 @@ export function ScenarioPage() {
                     text={editText}
                     color={editColor}
                     state={editText.trim().length === 0 ? 'empty' : 'live'}
-                    className="max-h-36 overflow-y-auto"
                   />
                 </div>
               </div>
@@ -621,6 +620,7 @@ export function ScenarioPage() {
                 value={newText}
                 onChange={(e) => setNewText(e.target.value)}
                 rows={3}
+                maxLength={2000}
                 className="w-full resize-y border border-border bg-surface-raised px-3 py-2 font-display text-lg uppercase tracking-wide text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
               />
               <div className="flex flex-wrap items-center gap-3">
@@ -634,7 +634,6 @@ export function ScenarioPage() {
                     text={newText}
                     color={newColor}
                     state={newText.trim().length === 0 ? 'empty' : 'live'}
-                    className="max-h-36 overflow-y-auto"
                   />
                 </div>
               </div>
