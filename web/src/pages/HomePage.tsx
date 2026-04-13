@@ -4,8 +4,11 @@ import { useLocation, useNavigate } from 'react-router'
 
 import { ApiError, addTape, createScenario, isSupabaseConfigured, listScenarios } from '../api/client'
 import { scenarioKeys } from '../api/queryKeys'
+import { LoginModal } from '../components/LoginModal'
 import { ScenarioLibrary } from '../components/ScenarioLibrary'
+import { useLoginGate } from '../hooks/useLoginGate'
 import { getKnownScenarioSlugs, rememberScenarioSlug } from '../lib/knownScenarios'
+import { useAuth } from '../providers/AuthProvider'
 import { TapeCreatorPanel } from '../tape'
 
 type HomeLocationState = { library?: boolean; home?: boolean }
@@ -15,6 +18,8 @@ export function HomePage() {
   const location = useLocation()
   const queryClient = useQueryClient()
   const configured = isSupabaseConfigured()
+  const { user } = useAuth()
+  const { isLoginGateOpen, openLoginGate, closeLoginGate } = useLoginGate()
   const [knownSlugs, setKnownSlugs] = useState(() => getKnownScenarioSlugs())
   const [view, setView] = useState<'library' | 'create'>('create')
 
@@ -134,6 +139,7 @@ export function HomePage() {
   const showExistingPath = hasKnownScenarios && tapeDestination === 'existing'
 
   return (
+    <>
     <main className="flex justify-center px-4 py-8">
       <div className="w-full max-w-[480px] md:max-w-[640px]">
         {showLibraryGrid ? (
@@ -232,7 +238,13 @@ export function HomePage() {
                     <button
                       type="button"
                       disabled={!configured || createMutation.isPending}
-                      onClick={() => createMutation.mutate()}
+                      onClick={() => {
+                        if (user === null) {
+                          openLoginGate()
+                          return
+                        }
+                        createMutation.mutate()
+                      }}
                       className="mt-4 min-h-[44px] w-full bg-accent px-4 py-3 font-ui text-sm font-medium text-accent-text transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {createMutation.isPending ? 'Creating…' : 'Create scenario & open'}
@@ -278,12 +290,16 @@ export function HomePage() {
                             addExistingMutation.isPending ||
                             (listQuery.data?.scenarios?.length ?? 0) === 0
                           }
-                          onClick={() =>
+                          onClick={() => {
+                            if (user === null) {
+                              openLoginGate()
+                              return
+                            }
                             addExistingMutation.mutate({
                               scenarioSlug: existingSelectValue,
                               idempotencyKey: crypto.randomUUID(),
                             })
-                          }
+                          }}
                           className="mt-4 min-h-[44px] w-full bg-accent px-4 py-3 font-ui text-sm font-medium text-accent-text transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {addExistingMutation.isPending ? 'Adding…' : 'Add tape & open'}
@@ -309,5 +325,7 @@ export function HomePage() {
         ) : null}
       </div>
     </main>
+    {isLoginGateOpen ? <LoginModal onClose={closeLoginGate} /> : null}
+    </>
   )
 }
