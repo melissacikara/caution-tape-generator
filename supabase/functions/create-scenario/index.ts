@@ -53,7 +53,7 @@ serve(async (req) => {
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
     .insert({ name, ...(userId ? { owner_id: userId } : {}) })
-    .select('id, name, public_slug, owner_id, created_at, updated_at')
+    .select('id, name, public_slug, owner_id, is_public, created_at, updated_at')
     .single()
 
   if (sErr || !scenario) {

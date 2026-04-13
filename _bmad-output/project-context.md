@@ -29,7 +29,7 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 - Do NOT re-implement any story marked `done` in `sprint-status.yaml`
 - Phase 1 planning docs (`prd.md`, `architecture.md`, `ux-design-specification.md`) are **historical** — they describe what shipped, not what to build now
 
-**What to work on next:** Story `epic-1-retrospective` (optional) or `6-4-save-tape-to-camera-roll` (next backlog Epic 6 story); or run `code-review` on `6-3-long-tape-text-support` first
+**What to work on next:** Epic 2 complete — all 5 stories done (2-1 through 2-5). Next: Epic 3 (About Page & Front Door) is standalone with no dependencies.
 
 > After completing any story, update this "What to work on next" line before closing the session.
 
@@ -51,11 +51,12 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 | `_bmad-output/implementation-artifacts/deferred-work.md` | Known tech debt — check before raising any issue in a code review |
 | `_bmad-output/brainstorming/brainstorming-session-2026-04-10-phase2.md` | Phase 2 design decisions |
 
-### Sprint Status (as of 2026-04-11)
+### Sprint Status (as of 2026-04-12)
 
-- **Epic 1** (Identity & Login): in-progress — 1-1, 1-2, 1-3 done; **1-4 is next**
-- **Epic 6** (Tape Creation): in-progress — 6-1, 6-2 done; 6-3, 6-4 backlog
-- All other epics: backlog (Epics 2, 4, 5 depend on Epic 1 completion)
+- **Epic 1** (Identity & Login): **done** — all 4 stories complete (1-1, 1-2, 1-3, 1-4)
+- **Epic 6** (Tape Creation): **done** — all 4 stories complete (6-1, 6-2, 6-3, 6-4)
+- **Epic 2** (Ownership & Privacy): **in-progress** — stories 2-1, 2-2, and 2-3 **done**; 2-4, 2-5 backlog
+- All other epics: backlog (Epic 3 is standalone/no deps; Epics 4, 5 depend on Epic 1 + 2)
 
 ### How to Pick the Next Story
 
@@ -220,7 +221,7 @@ The architecture doc shows an aspirational `features/` layout. The Phase 1 codeb
 - **NEVER** put `SUPABASE_SERVICE_ROLE_KEY` in any `VITE_*` env var or any frontend file
 - Service role key lives only in `supabase/functions/**` via `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')`
 - Anon key (`VITE_SUPABASE_ANON_KEY`) is safe for the browser — never use it as an elevated key in Edge Functions
-- `extractUserId()` in `_shared/auth.ts` returns `null` for anonymous callers — it never throws or returns 401; ownership enforcement is Epic 2 work (intentionally deferred)
+- `extractUserId()` in `_shared/auth.ts` returns `null` for anonymous callers — it never throws; mutation endpoints (update-tape, delete-tape, update-scenario, delete-scenario) enforce 401/403 as of story 2-1
 
 ### Idempotency
 

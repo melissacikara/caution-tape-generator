@@ -38,7 +38,7 @@
 # Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
 # Next up: story 1-4 (Epic 1), then 6-3 (Epic 6).
 generated: "2026-04-10"
-last_updated: "2026-04-11"  # updated: story 6-3 review
+last_updated: "2026-04-13"  # updated: story 2-5 done
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -47,7 +47,7 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   # ─── Epic 1: Identity & Login ────────────────────────────────────────────────
   # Architecturally foundational — must be completed before Epics 2, 4, and 5.
-  epic-1: in-progress
+  epic-1: done
   1-1-supabase-auth-setup-and-user-schema: done
   1-2-magic-link-login-flow: done
   1-3-login-gate-on-tape-and-scenario-creation: done
@@ -56,12 +56,12 @@ development_status:
 
   # ─── Epic 2: Ownership, Privacy & Public Safety ──────────────────────────────
   # Depends on Epic 1.
-  epic-2: backlog
-  2-1-creator-ownership-and-contributor-permissions: backlog
-  2-2-private-scenarios-unlisted-model: backlog
-  2-3-public-private-toggle: backlog
-  2-4-public-scenario-permissions: backlog
-  2-5-report-tape-and-persistent-footer: backlog
+  epic-2: in-progress
+  2-1-creator-ownership-and-contributor-permissions: done
+  2-2-private-scenarios-unlisted-model: done
+  2-3-public-private-toggle: done
+  2-4-public-scenario-permissions: done
+  2-5-report-tape-and-persistent-footer: done
   epic-2-retrospective: optional
 
   # ─── Epic 3: About Page & Front Door ─────────────────────────────────────────
@@ -93,9 +93,9 @@ development_status:
 
   # ─── Epic 6: Tape Creation Improvements ──────────────────────────────────────
   # Fully standalone — no dependencies, can ship in parallel with any epic.
-  epic-6: in-progress
+  epic-6: done
   6-1-mobile-color-picker-bug-fix: done
   6-2-unified-color-preset-swatches: done
-  6-3-long-tape-text-support: in-progress
-  6-4-save-tape-to-camera-roll: backlog
+  6-3-long-tape-text-support: done
+  6-4-save-tape-to-camera-roll: done
   epic-6-retrospective: optional

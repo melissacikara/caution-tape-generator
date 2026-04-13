@@ -9,11 +9,17 @@ import type {
   DeleteTapeResponse,
   GetScenarioResponse,
   ListScenariosResponse,
+  ReportTapeBody,
+  ReportTapeResponse,
+  ToggleScenarioVisibilityBody,
+  ToggleScenarioVisibilityResponse,
   UpdateScenarioBody,
   UpdateScenarioResponse,
   UpdateTapeBody,
   UpdateTapeResponse,
 } from './types'
+
+import { supabaseClient } from '../lib/supabase'
 
 export class ApiError extends Error {
   readonly code: string
@@ -40,14 +46,15 @@ function supabaseFunctionUrl(functionName: string): string {
 
 async function supabaseFetch(path: string, init: RequestInit): Promise<Response> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json')
   }
-  if (anon) {
-    headers.set('Authorization', `Bearer ${anon}`)
-    headers.set('apikey', anon)
-  }
+  headers.set('Authorization', `Bearer ${token}`)
+  headers.set('apikey', anon)
   return fetch(supabaseFunctionUrl(path), { ...init, headers })
 }
 
@@ -83,11 +90,14 @@ export async function createScenario(
 export async function getScenarioBySlug(slug: string): Promise<GetScenarioResponse> {
   const url = new URL(supabaseFunctionUrl('get-scenario-by-slug'))
   url.searchParams.set('slug', slug)
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
   const res = await fetch(url.toString(), {
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''}`,
-      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '',
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
     },
   })
   return parseJson<GetScenarioResponse>(res)
@@ -139,4 +149,22 @@ export async function listScenarios(slugs: string[]): Promise<ListScenariosRespo
     body: JSON.stringify({ slugs }),
   })
   return parseJson<ListScenariosResponse>(res)
+}
+
+export async function toggleScenarioVisibility(
+  body: ToggleScenarioVisibilityBody,
+): Promise<ToggleScenarioVisibilityResponse> {
+  const res = await supabaseFetch('toggle-scenario-visibility', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<ToggleScenarioVisibilityResponse>(res)
+}
+
+export async function reportTape(body: ReportTapeBody): Promise<ReportTapeResponse> {
+  const res = await supabaseFetch('report-tape', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<ReportTapeResponse>(res)
 }

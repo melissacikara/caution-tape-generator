@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router'
 
+import { AppFooter } from '../components/AppFooter'
 import { AppHeader } from '../components/AppHeader'
 import { isSupabaseConfigured } from '../api/client'
 
@@ -7,7 +8,7 @@ export function AppLayout() {
   const configured = isSupabaseConfigured()
 
   return (
-    <div className="min-h-svh overflow-x-hidden bg-background">
+    <div className="flex min-h-svh flex-col overflow-x-hidden bg-background">
       {!configured ? (
         <div
           role="status"
@@ -19,7 +20,10 @@ export function AppLayout() {
         </div>
       ) : null}
       <AppHeader />
-      <Outlet />
+      <div className="flex-1">
+        <Outlet />
+      </div>
+      <AppFooter />
     </div>
   )
 }

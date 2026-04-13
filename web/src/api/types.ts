@@ -2,6 +2,8 @@ export type ScenarioDto = {
   id: string
   name: string
   publicSlug: string
+  ownerId?: string
+  isPublic: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -11,6 +13,7 @@ export type TapeDto = {
   scenarioId: string
   tapeText: string
   color: string
+  authorId?: string
   createdAt: string
   updatedAt?: string
 }
@@ -79,6 +82,15 @@ export type DeleteScenarioResponse = {
   ok: true
 }
 
+export type ToggleScenarioVisibilityBody = {
+  scenarioSlug: string
+  isPublic: boolean
+}
+
+export type ToggleScenarioVisibilityResponse = {
+  scenario: ScenarioDto
+}
+
 export type ScenarioSummaryItem = {
   scenario: ScenarioDto
   tapeCount: number
@@ -87,3 +99,10 @@ export type ScenarioSummaryItem = {
 export type ListScenariosResponse = {
   scenarios: ScenarioSummaryItem[]
 }
+
+export type ReportTapeBody = {
+  scenarioSlug: string
+  tapeId: string
+}
+
+export type ReportTapeResponse = { ok: true }

@@ -10,7 +10,7 @@ import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
   scenarioSlug: z.string().min(1).max(128),
-  name: z.string().trim().min(1).max(500),
+  isPublic: z.boolean(),
 })
 
 serve(async (req) => {
@@ -45,7 +45,7 @@ serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, key)
-  const { scenarioSlug, name } = parsed.data
+  const { scenarioSlug, isPublic } = parsed.data
 
   const { data: existing, error: sErr } = await supabase
     .from('scenarios')
@@ -66,8 +66,9 @@ serve(async (req) => {
 
   const { data: rows, error: uErr } = await supabase
     .from('scenarios')
-    .update({ name, updated_at: new Date().toISOString() })
+    .update({ is_public: isPublic })
     .eq('id', existing.id)
+    .eq('owner_id', userId)
     .select('id, name, public_slug, owner_id, is_public, created_at, updated_at')
 
   if (uErr) {

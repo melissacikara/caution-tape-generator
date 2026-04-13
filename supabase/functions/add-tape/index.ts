@@ -48,7 +48,7 @@ serve(async (req) => {
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .select('id')
+    .select('id, is_public')
     .eq('public_slug', scenarioSlug)
     .maybeSingle()
 
@@ -57,6 +57,10 @@ serve(async (req) => {
   }
   if (!scenario) {
     return jsonError('NOT_FOUND', 'Scenario not found', 404)
+  }
+  // Public scenarios require auth; private/unlisted scenarios allow anonymous adds (link = invitation)
+  if (!userId && scenario.is_public) {
+    return jsonError('UNAUTHORIZED', 'Login required to add tapes to a public scenario', 401)
   }
 
   if (idempotencyKey) {

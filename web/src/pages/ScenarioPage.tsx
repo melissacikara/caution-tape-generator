@@ -9,14 +9,19 @@ import {
   deleteTape,
   getScenarioBySlug,
   isSupabaseConfigured,
+  reportTape,
+  toggleScenarioVisibility,
   updateScenario,
   updateTape,
 } from '../api/client'
 import { scenarioKeys } from '../api/queryKeys'
 import type { GetScenarioResponse, TapeDto } from '../api/types'
 import { DeleteConfirmSheet } from '../components/DeleteConfirmSheet'
+import { LoginModal } from '../components/LoginModal'
+import { useLoginGate } from '../hooks/useLoginGate'
 import { copyTextToClipboard } from '../lib/copyToClipboard'
 import { forgetScenarioSlug, rememberScenarioSlug } from '../lib/knownScenarios'
+import { useAuth } from '../providers/AuthProvider'
 import { ColorPickerSwatch } from '../tape/ColorPickerSwatch'
 import { TapeRenderer } from '../tape/TapeRenderer'
 
@@ -31,6 +36,8 @@ export function ScenarioPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const configured = isSupabaseConfigured()
+  const { user } = useAuth()
+  const { isLoginGateOpen, openLoginGate, closeLoginGate } = useLoginGate()
   const formId = useId()
   const renameInputRef = useRef<HTMLInputElement>(null)
   const creatorTextRef = useRef<HTMLTextAreaElement>(null)
@@ -46,6 +53,9 @@ export function ScenarioPage() {
   const [renamingScenario, setRenamingScenario] = useState(false)
   const [renameText, setRenameText] = useState('')
   const [confirmDeleteScenario, setConfirmDeleteScenario] = useState(false)
+  const [confirmMakePublic, setConfirmMakePublic] = useState(false)
+  const [reportedTapeIds, setReportedTapeIds] = useState<Set<string>>(() => new Set())
+  const [reportingTapeId, setReportingTapeId] = useState<string | null>(null)
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined' || !slug) return ''
@@ -261,6 +271,58 @@ export function ScenarioPage() {
     },
   })
 
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async (newIsPublic: boolean) => {
+      if (!slug) throw new Error('Missing slug')
+      return toggleScenarioVisibility({ scenarioSlug: slug, isPublic: newIsPublic })
+    },
+    onMutate: async (newIsPublic: boolean) => {
+      if (!slug) return
+      const key = scenarioKeys.bySlug(slug)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<GetScenarioResponse>(key)
+      if (previous) {
+        queryClient.setQueryData<GetScenarioResponse>(key, {
+          ...previous,
+          scenario: { ...previous.scenario, isPublic: newIsPublic },
+        })
+      }
+      return { previous }
+    },
+    onError: (_e, _v, ctx) => {
+      if (!slug) return
+      if (ctx?.previous) {
+        queryClient.setQueryData(scenarioKeys.bySlug(slug), ctx.previous)
+      }
+    },
+    onSettled: () => {
+      if (!slug) return
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.bySlug(slug) })
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+    },
+    onSuccess: () => {
+      setConfirmMakePublic(false)
+    },
+  })
+
+  const reportMutation = useMutation({
+    mutationFn: ({ tapeId, scenarioSlug }: { tapeId: string; scenarioSlug: string }) => {
+      setReportingTapeId(tapeId)
+      return reportTape({ tapeId, scenarioSlug })
+    },
+    onSuccess: (_data, vars) => {
+      setReportedTapeIds((prev) => {
+        const next = new Set(prev)
+        next.add(vars.tapeId)
+        return next
+      })
+      setReportingTapeId(null)
+    },
+    onError: () => {
+      // reportingTapeId intentionally kept set so the per-tape error message can render
+    },
+  })
+
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   const copyShare = useCallback(async () => {
@@ -379,6 +441,12 @@ export function ScenarioPage() {
   if (!data) return null
 
   const { scenario, tapes } = data
+
+  const isScenarioOwner = user !== null && !!scenario && user.id === scenario.ownerId
+
+  const canEditTape = (tape: TapeDto) =>
+    user !== null && !!scenario && (user.id === scenario.ownerId || user.id === tape.authorId)
+
   const addErr =
     addMutation.error instanceof ApiError
       ? addMutation.error.message
@@ -404,7 +472,13 @@ export function ScenarioPage() {
       ? deleteScenarioMutation.error.message
       : deleteScenarioMutation.error?.message
 
+  const toggleVisibilityErr =
+    toggleVisibilityMutation.error instanceof ApiError
+      ? toggleVisibilityMutation.error.message
+      : toggleVisibilityMutation.error?.message
+
   return (
+    <>
     <main className="flex justify-center px-4 pb-40 pt-8">
       <div className="w-full max-w-[480px] md:max-w-[640px]">
         <header className="border-b border-border pb-4">
@@ -452,28 +526,62 @@ export function ScenarioPage() {
                 {scenario.name}
               </h1>
               <div className="flex shrink-0 items-center gap-1 pt-1">
-                <button
-                  type="button"
-                  onClick={() => openRenameScenario(scenario.name)}
-                  className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Edit scenario name"
-                >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteScenario(true)}
-                  className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-red-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Delete scenario"
-                >
-                  Delete
-                </button>
+                {isScenarioOwner && (
+                  <>
+                    {!scenario.isPublic ? (
+                      <button
+                        type="button"
+                        disabled={toggleVisibilityMutation.isPending}
+                        onClick={() => setConfirmMakePublic(true)}
+                        className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="Make scenario public"
+                      >
+                        {toggleVisibilityMutation.isPending ? 'Updating…' : 'Make Public'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={toggleVisibilityMutation.isPending}
+                        onClick={() => toggleVisibilityMutation.mutate(false)}
+                        className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="Make scenario private"
+                      >
+                        {toggleVisibilityMutation.isPending ? 'Updating…' : 'Make Private'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openRenameScenario(scenario.name)}
+                      className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Edit scenario name"
+                    >
+                      Rename
+                    </button>
+                    {!scenario.isPublic && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteScenario(true)}
+                        className="min-h-[28px] border border-border px-2 font-ui text-xs text-muted hover:border-red-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="Delete scenario"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
           <p className="mt-1 font-ui text-xs text-muted">
             {tapes.length} tape{tapes.length === 1 ? '' : 's'}
+            {' · '}
+            <span className={scenario.isPublic ? 'text-foreground' : 'text-muted'}>
+              {scenario.isPublic ? 'Public' : 'Private'}
+            </span>
           </p>
+          {toggleVisibilityErr && !confirmMakePublic ? (
+            <p className="mt-1 font-ui text-xs text-red-400" role="alert">{toggleVisibilityErr}. Try again.</p>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input
               readOnly
@@ -499,23 +607,46 @@ export function ScenarioPage() {
                 color={tape.color}
                 state="generated"
               />
-              {isPersistedTape(tape) ? (
+              {(isPersistedTape(tape) && (canEditTape(tape) || scenario.isPublic)) ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openEditPanel(tape)}
-                    className="min-h-[44px] border border-border px-3 font-ui text-xs uppercase tracking-wide text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTapeToDelete(tape)}
-                    className="min-h-[44px] border border-border px-3 font-ui text-xs uppercase tracking-wide text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Delete
-                  </button>
+                  {canEditTape(tape) && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openEditPanel(tape)}
+                        className="min-h-[44px] border border-border px-3 font-ui text-xs uppercase tracking-wide text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTapeToDelete(tape)}
+                        className="min-h-[44px] border border-border px-3 font-ui text-xs uppercase tracking-wide text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                  {scenario.isPublic && (
+                    <button
+                      type="button"
+                      disabled={reportedTapeIds.has(tape.id) || (reportMutation.isPending && reportingTapeId === tape.id)}
+                      onClick={() => {
+                        if (!reportedTapeIds.has(tape.id)) {
+                          reportMutation.mutate({ tapeId: tape.id, scenarioSlug: slug! })
+                        }
+                      }}
+                      className="min-h-[44px] border border-border px-3 font-ui text-xs uppercase tracking-wide text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+                    >
+                      {reportedTapeIds.has(tape.id) ? 'Reported' : 'Report'}
+                    </button>
+                  )}
                 </div>
+              ) : null}
+              {reportMutation.isError && reportingTapeId === tape.id ? (
+                <p className="mt-1 font-ui text-xs text-red-400" role="alert">
+                  Couldn&apos;t report. Try again.
+                </p>
               ) : null}
             </li>
           ))}
@@ -553,6 +684,24 @@ export function ScenarioPage() {
           onConfirm={() => deleteScenarioMutation.mutate()}
           pending={deleteScenarioMutation.isPending}
           errorMessage={confirmDeleteScenario && deleteScenarioErr ? deleteScenarioErr : null}
+        />
+
+        <DeleteConfirmSheet
+          open={confirmMakePublic}
+          title="Make this scenario public?"
+          description="Once public, anyone can find and view it. You won't be able to delete it — make it private again to regain that right."
+          confirmLabel="Go public"
+          pendingLabel="Updating…"
+          cancelLabel="Keep private"
+          onCancel={() => {
+            if (!toggleVisibilityMutation.isPending) {
+              setConfirmMakePublic(false)
+              toggleVisibilityMutation.reset()
+            }
+          }}
+          onConfirm={() => toggleVisibilityMutation.mutate(true)}
+          pending={toggleVisibilityMutation.isPending}
+          errorMessage={confirmMakePublic && toggleVisibilityErr ? toggleVisibilityErr : null}
         />
 
         <div
@@ -649,7 +798,7 @@ export function ScenarioPage() {
                   onClick={handleAddTape}
                   className="min-h-[44px] flex-1 bg-accent px-4 py-2 font-ui text-sm font-medium text-accent-text disabled:opacity-50"
                 >
-                  {addMutation.isPending ? 'Adding…' : 'Add tape'}
+                  {addMutation.isPending ? 'Adding…' : 'ADD TO THE CHAOS'}
                 </button>
                 <button type="button" onClick={closeAddPanel} className="min-h-[44px] border border-border px-4 font-ui text-sm text-muted">
                   Cancel
@@ -666,16 +815,26 @@ export function ScenarioPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => (addOpen ? closeAddPanel() : openAddPanel())}
+                onClick={() => {
+                  if (addOpen) {
+                    closeAddPanel()
+                  } else if (user === null) {
+                    openLoginGate()
+                  } else {
+                    openAddPanel()
+                  }
+                }}
                 className="min-h-[44px] w-full max-w-sm bg-accent px-6 font-ui text-sm font-semibold uppercase tracking-wide text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-expanded={addOpen}
               >
-                {addOpen ? 'Close' : 'Add tape'}
+                {addOpen ? 'Close' : 'ADD TO THE CHAOS'}
               </button>
             )}
           </div>
         </div>
       </div>
     </main>
+    {isLoginGateOpen ? <LoginModal onClose={closeLoginGate} /> : null}
+    </>
   )
 }

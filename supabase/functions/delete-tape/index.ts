@@ -32,8 +32,10 @@ serve(async (req) => {
     return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
-  // Auth wiring — userId available for Epic 2 permission checks; anonymous access unchanged
-  const _userId = await extractUserId(req)
+  const userId = await extractUserId(req)
+  if (!userId) {
+    return jsonError('UNAUTHORIZED', 'Login required', 401)
+  }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -46,7 +48,7 @@ serve(async (req) => {
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .select('id')
+    .select('id, owner_id')
     .eq('public_slug', scenarioSlug)
     .maybeSingle()
 
@@ -57,18 +59,28 @@ serve(async (req) => {
     return jsonError('NOT_FOUND', 'Scenario not found', 404)
   }
 
-  const { data: removed, error: dErr } = await supabase
+  const { data: tapeRow, error: tErr } = await supabase
+    .from('tapes')
+    .select('id, author_id')
+    .eq('id', tapeId)
+    .eq('scenario_id', scenario.id)
+    .maybeSingle()
+
+  if (tErr) return jsonError('DATABASE_ERROR', tErr.message, 500)
+  if (!tapeRow) return jsonError('NOT_FOUND', 'Tape not found in this scenario', 404)
+
+  if (userId !== tapeRow.author_id && userId !== scenario.owner_id) {
+    return jsonError('FORBIDDEN', 'You do not have permission to modify this tape', 403)
+  }
+
+  const { error: dErr } = await supabase
     .from('tapes')
     .delete()
     .eq('id', tapeId)
     .eq('scenario_id', scenario.id)
-    .select('id')
 
   if (dErr) {
     return jsonError('DATABASE_ERROR', dErr.message, 500)
-  }
-  if (!removed?.length) {
-    return jsonError('NOT_FOUND', 'Tape not found in this scenario', 404)
   }
 
   return jsonOk({ ok: true })

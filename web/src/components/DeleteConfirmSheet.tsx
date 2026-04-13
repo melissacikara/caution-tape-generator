@@ -5,6 +5,7 @@ type Props = {
   title: string
   description: string
   confirmLabel: string
+  pendingLabel?: string
   cancelLabel?: string
   onConfirm: () => void
   onCancel: () => void
@@ -20,6 +21,7 @@ export function DeleteConfirmSheet({
   title,
   description,
   confirmLabel,
+  pendingLabel = 'Removing…',
   cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
@@ -87,7 +89,7 @@ export function DeleteConfirmSheet({
             onClick={onConfirm}
             className="min-h-[44px] bg-red-700 px-4 font-ui text-sm font-semibold uppercase tracking-wide text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-50"
           >
-            {pending ? 'Removing…' : confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </button>
         </div>
       </div>

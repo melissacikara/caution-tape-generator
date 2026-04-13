@@ -43,6 +43,20 @@
 - **`mapScenario`/`mapTape` use truthiness for optional ID fields:** `owner_id`/`author_id` are omitted when falsy. Explicit `!= null` check would be more defensive. Low risk for UUID columns.
 - **`extractUserId` called before env var check in some functions:** Minor ordering issue — the helper is self-guarded and will return null if env vars are missing. No functional impact.
 
+## Deferred from: code review of 2-1-creator-ownership-and-contributor-permissions (2026-04-12)
+
+- **Silent success on zero-row delete (race condition):** `delete-tape` and `delete-scenario` no longer verify that the destructive query actually removed a row (pre-fetch pattern replaced the row-count check). If a tape/scenario is deleted between the pre-fetch and the actual delete, the function returns `{ ok: true }` for a no-op. Acceptable idempotent behavior for this pattern; revisit if stricter delete semantics are required.
+- **Non-atomic TOCTOU on ownership check:** The ownership pre-fetch (SELECT) and the mutation (UPDATE/DELETE) are separate round-trips — not wrapped in a transaction. A concurrent request could change row ownership between the check and the operation. Architectural limitation of the current Supabase client usage; revisit if transaction support is added.
+
+## Deferred from: code review of 6-4-save-tape-to-camera-roll (2026-04-11)- **`parseHex` accepts non-hex characters and propagates NaN into canvas `fillStyle`:** Copied verbatim from `TapeRenderer.tsx` per story spec to maintain identical behavior. Values like `#GGGGGG` produce `NaN` channel math and an invalid color string. The UI always provides valid hex via `ColorPickerSwatch`, so real-world impact is low; fix together with `TapeRenderer` if input validation is ever added.
+- **Canvas export produces potentially very large images for max-length tape text:** `repeats` is capped at 64 per spec, but each segment grows with text length; a 2000-char locked tape could produce a canvas exceeding 500k × 44px. Browser canvas size limits (typically 32k–65k px wide) may silently clamp or blank the result. Investigate a max-width clamp or resolution reduction for long tapes if users hit blank exports.
+
+## Deferred from: code review of 2-3-public-private-toggle (2026-04-12)
+- **`extractUserId` called before env check in `toggle-scenario-visibility`:** Auth is checked before `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are validated. If env vars are missing and `extractUserId` returns null (which it can when the Supabase URL is absent), the function returns 401 UNAUTHORIZED instead of the more accurate 500 SERVER_CONFIG. Minor operational/debugging concern only — no user-facing impact in normal deployments.
+
+## Deferred from: code review of 2-5-report-tape-and-persistent-footer (2026-04-13)
+- **No `tapeId`↔`scenarioSlug` cross-validation in `report-tape` Edge Function:** The function accepts any valid tape UUID paired with any scenario slug without verifying the tape actually belongs to that scenario. A direct API caller could log a mismatched report. No exploitable consequence for an append-only admin log; acceptable for MVP scope.
+- **Raw `DATABASE_ERROR` on FK violation for non-existent tapeId in `report-tape`:** If a caller submits a UUID for a deleted or non-existent tape, the FK constraint fires and returns HTTP 500 with raw Postgres error detail. Pre-existing pattern tracked elsewhere in this file. Address when the broader DB error leakage issue is resolved.
 
 
-- ~~Story file list references `web/src/App.tsx`~~ — see **Resolved** above.
+

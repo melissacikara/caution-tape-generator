@@ -33,7 +33,7 @@ serve(async (req) => {
 
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .select('id, name, public_slug, owner_id, created_at, updated_at')
+    .select('id, name, public_slug, owner_id, is_public, created_at, updated_at')
     .eq('public_slug', slug)
     .maybeSingle()
 
