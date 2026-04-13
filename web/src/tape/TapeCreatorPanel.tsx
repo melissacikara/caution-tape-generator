@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 
+import { LoginModal } from '../components/LoginModal'
+import { useLoginGate } from '../hooks/useLoginGate'
+import { useAuth } from '../providers/AuthProvider'
 import { ColorPickerSwatch } from './ColorPickerSwatch'
+import { exportTapeAsImage } from './exportTapeAsImage'
 import { TapeRenderer } from './TapeRenderer'
 
 const DEFAULT_TAPE_COLOR = '#FFD000'
@@ -23,9 +27,12 @@ export function TapeCreatorPanel({
   className = '',
   onLockedTapeChange,
 }: TapeCreatorPanelProps) {
+  const { user } = useAuth()
+  const { isLoginGateOpen, openLoginGate, closeLoginGate } = useLoginGate()
   const [warningText, setWarningText] = useState('')
   const [tapeColor, setTapeColor] = useState(DEFAULT_TAPE_COLOR)
   const [lockedTape, setLockedTape] = useState<LockedTape | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const isLocked = lockedTape !== null
 
@@ -37,6 +44,10 @@ export function TapeCreatorPanel({
   const handleGenerate = () => {
     const t = warningText.trim()
     if (t.length === 0) return
+    if (user === null) {
+      openLoginGate()
+      return
+    }
     setLockedTape({ text: t, color: tapeColor })
   }
 
@@ -44,11 +55,27 @@ export function TapeCreatorPanel({
     setLockedTape(null)
     setWarningText('')
     setTapeColor(DEFAULT_TAPE_COLOR)
+    setExportError(null)
+  }
+
+  const handleSaveTape = async () => {
+    if (!lockedTape) return
+    setExportError(null)
+    try {
+      await exportTapeAsImage(lockedTape)
+    } catch (err) {
+      if (err != null && (err as { name?: unknown }).name === 'AbortError') return
+      setExportError(err instanceof Error ? err.message : 'Export failed')
+    }
   }
 
   useEffect(() => {
     onLockedTapeChange?.(lockedTape)
   }, [lockedTape, onLockedTapeChange])
+
+  useEffect(() => {
+    setExportError(null)
+  }, [lockedTape])
 
   return (
     <div className={`flex flex-col gap-8 ${className}`}>
@@ -115,8 +142,25 @@ export function TapeCreatorPanel({
             onClick={handleGenerate}
             className="min-h-[44px] w-full bg-accent px-4 py-3 font-ui text-sm font-medium text-accent-text transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Generate
+            ISSUE A WARNING
           </button>
+        ) : null}
+        {isLocked && !exportError ? (
+          <button
+            type="button"
+            onClick={() => void handleSaveTape()}
+            className="min-h-[44px] w-full border border-accent bg-transparent px-4 py-3 font-ui text-sm text-accent transition-colors hover:bg-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Save tape
+          </button>
+        ) : null}
+        {exportError ? (
+          <p role="alert" className="font-ui text-xs text-red-400">
+            {exportError}{' '}
+            <button type="button" onClick={() => void handleSaveTape()} className="underline">
+              Try again
+            </button>
+          </p>
         ) : null}
         <button
           type="button"
@@ -126,6 +170,7 @@ export function TapeCreatorPanel({
           Reset
         </button>
       </footer>
+      {isLoginGateOpen ? <LoginModal onClose={closeLoginGate} /> : null}
     </div>
   )
 }

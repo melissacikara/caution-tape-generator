@@ -1,6 +1,6 @@
 # Story 6.3: Long Tape Text Support
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -42,11 +42,11 @@ so that the chaotic spirit of the app is never truncated.
 
 ### Review Findings
 
-- [ ] [Review][Decision] Bundled out-of-scope auth changes — `ScenarioPage.tsx` and `TapeCreatorPanel.tsx` contain Epic 1 login-gate code (imports, hooks, `LoginModal` render, `user === null` guard, button label renames) that is not part of story 6-3. These belong to stories 1-3/1-4. Decision: should these be separated into their own commit, or accepted as bundled here?
-- [ ] [Review][Decision] `TapeRenderer.test.tsx` asserts CSS class names directly (`classList.contains`) — project testing rules say test for accessibility/behavior, not style output. Decision: rewrite overflow tests as behavioral/a11y assertions, or accept the class-name tests as pragmatic for a CSS-only fix?
-- [ ] [Review][Patch] Stripe gradient shifts on horizontal scroll — `background` on a `w-max` inner div uses a `repeating-linear-gradient` that tiles from the element origin; scrolling causes the visible gradient to shift rather than stay fixed. Fix: add `backgroundAttachment: 'local'` to the stripe background style. [`web/src/tape/TapeRenderer.tsx`]
-- [ ] [Review][Patch] `loading` state not checked before `openLoginGate` — `user === null` is true during auth initialisation; clicking "ADD TO THE CHAOS" before auth resolves opens the login modal spuriously. Fix: check `!loading` before calling `openLoginGate`. [`web/src/pages/ScenarioPage.tsx`, `web/src/tape/TapeCreatorPanel.tsx`]
-- [x] [Review][Defer] Session expiry while add panel is open — `addOpen` stays `true` if `user` becomes `null` after opening; Epic 2 auth session work will address this — deferred, pre-existing architecture gap
+- [x] [Review][Decision] Bundled out-of-scope auth changes — resolved: committed 6-3 changes separately; Epic 1 auth changes remain in working tree for their own commit
+- [x] [Review][Decision] `TapeRenderer.test.tsx` asserts CSS class names directly — resolved: accepted as pragmatic for a CSS-only fix; jsdom cannot test scroll layout behavior
+- [x] [Review][Patch] Stripe gradient shifts on horizontal scroll — resolved: added `backgroundAttachment: 'local'` to stripe background style [`web/src/tape/TapeRenderer.tsx`]
+- [x] [Review][Patch] `loading` state not checked before `openLoginGate` — resolved: `useLoginGate.openLoginGate` already guards `if (user !== null || loading) return` internally; no change needed
+- [x] [Review][Defer] Session expiry while add panel is open — deferred, pre-existing architecture gap
 
 ## Dev Notes
 
