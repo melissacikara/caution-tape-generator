@@ -267,7 +267,7 @@ export function ScenarioPage() {
     onSuccess: () => {
       if (slug) forgetScenarioSlug(slug)
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
-      navigate('/')
+      navigate('/create', { state: { library: true } })
     },
   })
 

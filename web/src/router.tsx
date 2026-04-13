@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 
 import { AppLayout } from './layout/AppLayout'
 import { AboutPage } from './pages/AboutPage'
@@ -11,7 +11,8 @@ export const router = createBrowserRouter([
   {
     element: <AppLayout />,
     children: [
-      { path: '/', element: <HomePage /> },
+      { path: '/', element: <Navigate to="/about" replace /> },
+      { path: '/create', element: <HomePage /> },
       { path: '/about', element: <AboutPage /> },
       { path: '/auth/callback', element: <AuthCallbackPage /> },
       { path: '/s/:slug', element: <ScenarioPage /> },

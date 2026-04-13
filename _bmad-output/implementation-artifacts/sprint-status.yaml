@@ -38,7 +38,7 @@
 # Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
 # Next up: story 1-4 (Epic 1), then 6-3 (Epic 6).
 generated: "2026-04-10"
-last_updated: "2026-04-13"  # updated: story 2-5 done
+last_updated: "2026-04-12"  # updated: epic 3 complete (3-3 decision B)
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
 
   # ─── Epic 2: Ownership, Privacy & Public Safety ──────────────────────────────
   # Depends on Epic 1.
-  epic-2: in-progress
+  epic-2: done
   2-1-creator-ownership-and-contributor-permissions: done
   2-2-private-scenarios-unlisted-model: done
   2-3-public-private-toggle: done
@@ -66,10 +66,10 @@ development_status:
 
   # ─── Epic 3: About Page & Front Door ─────────────────────────────────────────
   # Lightweight — can ship early; copy dependency noted in epics.
-  epic-3: backlog
-  3-1-about-page-content-and-layout: backlog
-  3-2-homepage-route-serves-about-page: backlog
-  3-3-navigation-header-update: backlog
+  epic-3: done
+  3-1-about-page-content-and-layout: done
+  3-2-homepage-route-serves-about-page: done
+  3-3-navigation-header-update: done
   epic-3-retrospective: optional
 
   # ─── Epic 4: Library Redesign ─────────────────────────────────────────────────

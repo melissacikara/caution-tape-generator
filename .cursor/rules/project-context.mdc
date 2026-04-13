@@ -1,0 +1,6 @@
+---
+description: Project context, architecture rules, and sprint status for caution-bmad
+alwaysApply: true
+---
+
+Always read `_bmad-output/project-context.md` at the start of every conversation for project rules, tech stack, anti-patterns, and current sprint context before making any suggestions or code changes.

@@ -29,7 +29,7 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 - Do NOT re-implement any story marked `done` in `sprint-status.yaml`
 - Phase 1 planning docs (`prd.md`, `architecture.md`, `ux-design-specification.md`) are **historical** — they describe what shipped, not what to build now
 
-**What to work on next:** Epic 2 complete — all 5 stories done (2-1 through 2-5). Next: Epic 3 (About Page & Front Door) is standalone with no dependencies.
+**What to work on next:** Epic 3 **done** (3-1–3-3). Next: Epic 4 (Library Redesign, depends on Epics 1 + 2 — both done).
 
 > After completing any story, update this "What to work on next" line before closing the session.
 
@@ -55,8 +55,9 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 
 - **Epic 1** (Identity & Login): **done** — all 4 stories complete (1-1, 1-2, 1-3, 1-4)
 - **Epic 6** (Tape Creation): **done** — all 4 stories complete (6-1, 6-2, 6-3, 6-4)
-- **Epic 2** (Ownership & Privacy): **in-progress** — stories 2-1, 2-2, and 2-3 **done**; 2-4, 2-5 backlog
-- All other epics: backlog (Epic 3 is standalone/no deps; Epics 4, 5 depend on Epic 1 + 2)
+- **Epic 2** (Ownership & Privacy): **done** — stories 2-1 through 2-5 complete
+- **Epic 3** (About Page & Front Door): **done** — stories 3-1 through 3-3 complete (About nav: logo + text link both to `/about` per decision B)
+- All other epics: backlog (Epics 4, 5 depend on Epic 1 + 2)
 
 ### How to Pick the Next Story
 
