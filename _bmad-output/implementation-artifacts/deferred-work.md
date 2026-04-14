@@ -54,9 +54,38 @@
 ## Deferred from: code review of 2-3-public-private-toggle (2026-04-12)
 - **`extractUserId` called before env check in `toggle-scenario-visibility`:** Auth is checked before `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are validated. If env vars are missing and `extractUserId` returns null (which it can when the Supabase URL is absent), the function returns 401 UNAUTHORIZED instead of the more accurate 500 SERVER_CONFIG. Minor operational/debugging concern only — no user-facing impact in normal deployments.
 
+## Deferred from: security audit of 4-5-security-and-abuse-posture-review-for-anonymous-sharing.md (2026-04-13)
+
+- **No application-level rate limiting on any Edge Function:** All Edge Functions (`create-scenario`, `add-tape`, `update-tape`, `delete-tape`, `update-scenario`, `delete-scenario`, `list-scenarios`, `get-scenario-by-slug`, `report-tape`, `toggle-scenario-visibility`) rely exclusively on Supabase platform-level rate limits. No per-IP, per-user, or per-endpoint throttling exists in application code. Acceptable for MVP; revisit before public launch.
+- **Anonymous scenario creation is uncapped:** Any caller (no auth, no CAPTCHA) can POST to `create-scenario` without limit. A script could create thousands of scenarios. Mitigations: application-level rate limiting (above), CAPTCHA on the create flow, or anonymous creation quotas. Deferred — acceptable given low current traffic; prioritize with rate limiting work.
+- **NFR13 future ownership/auth work:** NFR13 ("future ownership and auth improvements") is addressed by Epic 5 (Library Redesign) and Epic 7 (Notifications and Following). No action needed in this story; captured here for traceability.
+
+## Deferred from: code review of 4-4-accessibility-audit-and-fixes-to-wcag-2-1-aa-baseline.md (2026-04-13)
+
+- **Stacked modal Escape ordering:** `LoginModal` and `DeleteConfirmSheet` both attach `window.addEventListener('keydown', ...)` for Escape independently. If both are mounted simultaneously, one Escape press can invoke both `onClose` and `onCancel`. Pre-existing architectural pattern (DeleteConfirmSheet predates Story 4.4). Full modal/portal layer management was explicitly deferred in the story. Revisit when a modal manager or focus-trap utility is introduced.
+- **`setState` after unmount on Escape-during-loading:** Pressing Escape while `signInWithOtp` is in flight unmounts `LoginModal`; the async handler may still resolve and call `setModalState`/`setErrorMessage`. Pre-existing: already tracked for the Cancel/backdrop path in this file. React 18+ suppresses the warning. Consolidate with the existing `LoginModal` state-update-after-unmount entry when an `AbortController` fix is applied.
+
 ## Deferred from: code review of 2-5-report-tape-and-persistent-footer (2026-04-13)
 - **No `tapeId`↔`scenarioSlug` cross-validation in `report-tape` Edge Function:** The function accepts any valid tape UUID paired with any scenario slug without verifying the tape actually belongs to that scenario. A direct API caller could log a mismatched report. No exploitable consequence for an append-only admin log; acceptable for MVP scope.
 - **Raw `DATABASE_ERROR` on FK violation for non-existent tapeId in `report-tape`:** If a caller submits a UUID for a deleted or non-existent tape, the FK constraint fires and returns HTTP 500 with raw Postgres error detail. Pre-existing pattern tracked elsewhere in this file. Address when the broader DB error leakage issue is resolved.
 
+## Deferred from: code review of 5-1-two-tab-library-structure-and-shell (2026-04-13)
 
+- **`router.tsx` includes lazy-import conversions of pre-existing pages from prior stories (4.x):** The uncommitted diff for story 5-1 includes lazy import conversions of AboutPage, AuthCallbackPage, HomePage, NotFoundPage, and ScenarioPage — changes made during Epic 4 stories that were never committed. These are correct and regression-tested. No action needed beyond committing all phase2 work as a coherent batch.
+- **`AppHeader.tsx` diff includes story 4-1 responsive layout additions:** `min-w-0 flex-1 truncate` on the logo link and `shrink-0 gap-3 md:gap-5` on the nav element appear in the 5-1 diff but originate from story 4-1. Correct and tested. Same batch-commit situation as above.
 
+## Deferred from: code review of 5-2-public-scenarios-feed.md (2026-04-13)
+
+- **`list-public-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.
+
+- **Public feed JSON includes `ownerId` per scenario:** `mapScenario` shape matches `list-scenarios` and `get-scenario-by-slug`; same product/PII exposure tradeoff noted under the existing `owner_id` / `author_id` exposure bullet.
+
+- **Tape counts via full row fetch from `tapes`:** For each feed load, counts are derived by selecting all `scenario_id` rows for matched scenarios (up to 50), same pattern as `list-scenarios`. Revisit with grouped `COUNT` in SQL if tape volume or scenario count makes this hot.
+
+## Deferred from: code review of 5-3-private-tab-my-scenarios-bucket.md (2026-04-13)
+
+- **`list-my-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.
+
+## Deferred from: code review of 5-4-private-tab-invited-bucket.md (2026-04-13)
+
+- **`list-invited-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `iErr.message` / `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.

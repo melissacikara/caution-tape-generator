@@ -20,8 +20,7 @@ serve(async (req) => {
     return jsonError('BAD_REQUEST', 'Query parameter slug is required', 400)
   }
 
-  // Auth wiring — userId available for Epic 2 permission checks; anonymous access unchanged
-  const _userId = await extractUserId(req)
+  const userId = await extractUserId(req)
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -42,6 +41,19 @@ serve(async (req) => {
   }
   if (!scenario) {
     return jsonError('NOT_FOUND', 'Scenario not found', 404)
+  }
+
+  // Best-effort invite tracking: record that this logged-in non-owner opened a private board.
+  // The upsert is fire-and-complete (await ensures it runs before response) but errors are swallowed
+  // so a DB hiccup never blocks the scenario load.
+  if (userId && !scenario.is_public && scenario.owner_id !== userId) {
+    await supabase
+      .from('scenario_invites')
+      .upsert(
+        { user_id: userId, scenario_id: scenario.id },
+        { onConflict: 'user_id,scenario_id', ignoreDuplicates: true },
+      )
+      .then(() => {})
   }
 
   const { data: tapeRows, error: tErr } = await supabase

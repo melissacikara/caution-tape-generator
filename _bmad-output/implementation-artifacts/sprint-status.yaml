@@ -1,5 +1,5 @@
 # generated: 2026-04-10
-# last_updated: 2026-04-10
+# last_updated: 2026-04-13 (5-5 review)
 # project: caution-bmad
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
 # Next up: story 1-4 (Epic 1), then 6-3 (Epic 6).
 generated: "2026-04-10"
-last_updated: "2026-04-12"  # updated: epic 3 complete (3-3 decision B)
+last_updated: "2026-04-13"  # 5-5 review
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -72,30 +72,40 @@ development_status:
   3-3-navigation-header-update: done
   epic-3-retrospective: optional
 
-  # ─── Epic 4: Library Redesign ─────────────────────────────────────────────────
-  # Depends on Epics 1 + 2.
-  epic-4: backlog
-  4-1-two-tab-library-structure-and-shell: backlog
-  4-2-public-scenarios-feed: backlog
-  4-3-private-tab-my-scenarios-bucket: backlog
-  4-4-private-tab-invited-bucket: backlog
-  4-5-private-tab-following-bucket: backlog
+  # ─── Epic 4: Polished, resilient, inclusive experience ─────────────────────────
+  # Per epics.md — FR26 + cross-cutting quality. Depends on Epics 1 + 2 (done).
+  epic-4: done
+  4-1-responsive-layout-verification-across-all-primary-routes: done
+  4-2-performance-pass-for-load-and-interaction-budgets: done
+  4-3-reliability-hardening-for-flaky-networks-and-mutation-failures: done
+  4-4-accessibility-audit-and-fixes-to-wcag-2-1-aa-baseline: done
+  4-5-security-and-abuse-posture-review-for-anonymous-sharing: done
   epic-4-retrospective: optional
 
-  # ─── Epic 5: Notifications & Following ───────────────────────────────────────
-  # Depends on Epics 1 + 2.
-  epic-5: backlog
-  5-1-activity-tracking-and-badge-data-model: backlog
-  5-2-quiet-badge-on-scenario-cards: backlog
-  5-3-follow-and-unfollow-a-public-scenario: backlog
-  5-4-opportunistic-follow-prompt: backlog
+  # ─── Epic 5: Library Redesign — two-tab public and private ──────────────────
+  # Depends on Epics 1 + 2. Public tab (community feed) + Private tab (3 buckets).
+  epic-5: in-progress
+  5-1-two-tab-library-structure-and-shell: done
+  5-2-public-scenarios-feed: done
+  5-3-private-tab-my-scenarios-bucket: done
+  5-4-private-tab-invited-bucket: done
+  5-5-private-tab-following-bucket: review
   epic-5-retrospective: optional
 
   # ─── Epic 6: Tape Creation Improvements ──────────────────────────────────────
-  # Fully standalone — no dependencies, can ship in parallel with any epic.
+  # Fully standalone — no dependencies, shipped in parallel with Epics 1–3.
   epic-6: done
   6-1-mobile-color-picker-bug-fix: done
   6-2-unified-color-preset-swatches: done
   6-3-long-tape-text-support: done
   6-4-save-tape-to-camera-roll: done
   epic-6-retrospective: optional
+
+  # ─── Epic 7: Notifications and following ─────────────────────────────────────
+  # Depends on Epics 1 + 5 (Following bucket must exist in library first).
+  epic-7: backlog
+  7-1-activity-tracking-and-badge-data-model: backlog
+  7-2-quiet-badge-on-scenario-cards: backlog
+  7-3-follow-and-unfollow-a-public-scenario: backlog
+  7-4-opportunistic-follow-prompt: backlog
+  epic-7-retrospective: optional

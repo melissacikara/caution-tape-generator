@@ -5,9 +5,8 @@ import { LoginModal } from './LoginModal'
 import { useAuth } from '../providers/AuthProvider'
 
 /**
- * UX-DR6: slim header — wordmark (Bebas / accent) left, Library link right.
- * Logo links to /about — the front door since story 3-2 made / redirect there.
- * Library uses `library` state so /create switches to the scenario grid when applicable.
+ * UX-DR6: slim header — wordmark (Bebas / accent) left, nav right.
+ * Wordmark and Create link go to /create; About stays on /about; / still redirects to /about.
  */
 export function AppHeader() {
   const { user, loading, signOut } = useAuth()
@@ -18,12 +17,18 @@ export function AppHeader() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
         <div className="mx-auto flex h-[52px] w-full max-w-[480px] items-center justify-between gap-4 px-4 md:max-w-[640px] md:px-6">
           <Link
-            to="/about"
-            className="font-display text-base uppercase tracking-[0.12em] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            to="/create"
+            className="min-w-0 flex-1 truncate font-display text-base uppercase tracking-[0.12em] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             ⚠ Caution Tape Generator
           </Link>
-          <nav aria-label="Main" className="flex items-center gap-5">
+          <nav aria-label="Main" className="flex shrink-0 items-center gap-3 md:gap-5">
+            <Link
+              to="/create"
+              className="font-ui text-sm text-muted underline-offset-4 transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Create
+            </Link>
             <Link
               to="/about"
               className="font-ui text-sm text-muted underline-offset-4 transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -31,8 +36,7 @@ export function AppHeader() {
               About
             </Link>
             <Link
-              to="/create"
-              state={{ library: true }}
+              to="/library"
               className="font-ui text-sm text-muted underline-offset-4 transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Library

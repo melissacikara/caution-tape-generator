@@ -99,6 +99,31 @@ export function AboutPage() {
           </p>
         </section>
 
+        <section
+          id="reporting"
+          className="scroll-mt-[52px] border-x border-b border-border bg-surface-raised px-4 py-8 md:px-6"
+          aria-labelledby="reporting-heading"
+        >
+          <h2
+            id="reporting-heading"
+            className="font-display text-xl uppercase tracking-[0.12em] text-accent"
+          >
+            Report a tape or scenario
+          </h2>
+          <p className="mt-6 font-ui text-sm leading-relaxed text-muted">
+            Reports are for <strong className="font-medium text-foreground">public</strong> scenarios only.
+            Open the scenario from the Library (Public tab), scroll to the tape, and use{' '}
+            <strong className="font-medium text-foreground">Report</strong> under that tape.
+            We review flags; there is no separate form for whole scenarios yet.
+          </p>
+          <Link
+            to="/library"
+            className="mt-6 inline-flex min-h-[44px] cursor-pointer items-center justify-center border border-border bg-background px-5 py-2.5 font-ui text-sm font-medium uppercase tracking-wide text-foreground transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
+          >
+            Open library
+          </Link>
+        </section>
+
         <footer className="border-x border-border bg-background px-4 py-6 md:px-6">
           <p className="font-ui text-xs uppercase tracking-[0.15em] text-muted">
             The tape does not make itself.

@@ -20,4 +20,11 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/router.tsx'],
+    rules: {
+      // Route table uses `lazy()` factories; not a typical component module.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

@@ -7,10 +7,15 @@ export type ScenarioLibraryProps = {
   isLoading: boolean
   errorMessage?: string
   onRetry?: () => void
+  emptyMessage?: string
+  /** When set (e.g. community feed), replaces the default zero-tape line aimed at creators. */
+  zeroTapeCaption?: string
 }
 
-function provocativeLine(count: number): string {
-  if (count === 0) return 'Quiet floor — add the first warning.'
+function provocativeLine(count: number, zeroTapeCaption?: string): string {
+  if (count === 0) {
+    return zeroTapeCaption ?? 'Quiet floor — add the first warning.'
+  }
   if (count === 1) return '1 tape on the board. Room for chaos.'
   return `${count} tapes stacked. Who stops first?`
 }
@@ -20,6 +25,8 @@ export function ScenarioLibrary({
   isLoading,
   errorMessage,
   onRetry,
+  emptyMessage = 'No scenarios found. Create one to get started.',
+  zeroTapeCaption,
 }: ScenarioLibraryProps) {
   if (isLoading) {
     return (
@@ -51,7 +58,7 @@ export function ScenarioLibrary({
   if (items.length === 0) {
     return (
       <p className="font-ui text-sm text-muted">
-        No scenarios found. Create one to get started.
+        {emptyMessage}
       </p>
     )
   }
@@ -67,7 +74,9 @@ export function ScenarioLibrary({
             <span className="font-display text-xl uppercase leading-tight tracking-wide text-foreground">
               {scenario.name}
             </span>
-            <span className="mt-2 font-ui text-xs text-muted">{provocativeLine(tapeCount)}</span>
+            <span className="mt-2 font-ui text-xs text-muted">
+              {provocativeLine(tapeCount, zeroTapeCaption)}
+            </span>
           </Link>
         </li>
       ))}

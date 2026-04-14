@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 import { ApiError, addTape, createScenario, isSupabaseConfigured, listScenarios } from '../api/client'
@@ -20,6 +20,7 @@ export function HomePage() {
   const configured = isSupabaseConfigured()
   const { user } = useAuth()
   const { isLoginGateOpen, openLoginGate, closeLoginGate } = useLoginGate()
+  const formId = useId()
   const [knownSlugs, setKnownSlugs] = useState(() => getKnownScenarioSlugs())
   const [view, setView] = useState<'library' | 'create'>('create')
 
@@ -42,9 +43,34 @@ export function HomePage() {
     text: string
     color: string
   } | null>(null)
+  /**
+   * Stable idempotency key for the "add to existing scenario" flow.
+   * Generated when lockedForScenario first becomes non-null and held stable so that
+   * user retries after a network failure reuse the same key — preventing duplicate tapes (4.3).
+   * Reset to null on success (new add session needs a fresh key) or when tape is cleared.
+   * Also rotated when the target scenario changes (same tape, different destination = new session).
+   */
+  const [addExistingIdempotencyKey, setAddExistingIdempotencyKey] = useState<string | null>(null)
+  const prevLockedRef = useRef<{ text: string; color: string } | null>(null)
   /** When you already have scenarios on this device: add locked tape to one of them vs create new. */
   const [tapeDestination, setTapeDestination] = useState<'new' | 'existing'>('new')
   const [selectedSlug, setSelectedSlug] = useState('')
+
+  /** Generate a fresh idempotency key when a tape is locked; clear it when unlocked. */
+  useEffect(() => {
+    const prev = prevLockedRef.current
+    const textChanged = lockedForScenario?.text !== prev?.text
+    const colorChanged = lockedForScenario?.color !== prev?.color
+    prevLockedRef.current = lockedForScenario
+
+    if (!lockedForScenario) {
+      setAddExistingIdempotencyKey(null)
+    } else if (!prev || textChanged || colorChanged) {
+      // New tape or tape content changed → new add session → new key
+      setAddExistingIdempotencyKey(crypto.randomUUID())
+    }
+    // If lockedForScenario is the same object reference (no content change), keep existing key
+  }, [lockedForScenario])
 
   const handleLockedTapeChange = useCallback(
     (tape: { text: string; color: string } | null) => {
@@ -73,6 +99,11 @@ export function HomePage() {
     }
     return rows[0]?.scenario.publicSlug ?? ''
   }, [scenarioRows, selectedSlug])
+
+  /** Rotate the key when the target scenario changes — same tape, new destination = new add session. */
+  useEffect(() => {
+    setAddExistingIdempotencyKey((prev) => (prev !== null ? crypto.randomUUID() : null))
+  }, [existingSelectValue])
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -110,6 +141,7 @@ export function HomePage() {
       })
     },
     onSuccess: (_, { scenarioSlug }) => {
+      setAddExistingIdempotencyKey(null)
       rememberScenarioSlug(scenarioSlug)
       setKnownSlugs(getKnownScenarioSlugs())
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
@@ -223,11 +255,11 @@ export function HomePage() {
 
                 {showNewPath ? (
                   <div className="mt-4">
-                    <label className="block font-ui text-xs text-muted" htmlFor="scenario-name">
+                    <label className="block font-ui text-xs text-muted" htmlFor={`${formId}-scenario-name`}>
                       Scenario name
                     </label>
                     <input
-                      id="scenario-name"
+                      id={`${formId}-scenario-name`}
                       type="text"
                       value={scenarioName}
                       onChange={(e) => setScenarioName(e.target.value)}
@@ -259,7 +291,7 @@ export function HomePage() {
 
                 {showExistingPath ? (
                   <div className="mt-4">
-                    <label className="block font-ui text-xs text-muted" htmlFor="existing-scenario">
+                    <label className="block font-ui text-xs text-muted" htmlFor={`${formId}-existing-scenario`}>
                       Scenario
                     </label>
                     {listQuery.isPending ? (
@@ -271,7 +303,7 @@ export function HomePage() {
                     ) : (
                       <>
                         <select
-                          id="existing-scenario"
+                          id={`${formId}-existing-scenario`}
                           value={existingSelectValue}
                           onChange={(e) => setSelectedSlug(e.target.value)}
                           className="mt-1 w-full border border-border bg-background px-3 py-2 font-ui text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
@@ -287,6 +319,7 @@ export function HomePage() {
                           disabled={
                             !configured ||
                             !existingSelectValue ||
+                            !addExistingIdempotencyKey ||
                             addExistingMutation.isPending ||
                             (listQuery.data?.scenarios?.length ?? 0) === 0
                           }
@@ -295,9 +328,10 @@ export function HomePage() {
                               openLoginGate()
                               return
                             }
+                            if (!addExistingIdempotencyKey) return
                             addExistingMutation.mutate({
                               scenarioSlug: existingSelectValue,
-                              idempotencyKey: crypto.randomUUID(),
+                              idempotencyKey: addExistingIdempotencyKey,
                             })
                           }}
                           className="mt-4 min-h-[44px] w-full bg-accent px-4 py-3 font-ui text-sm font-medium text-accent-text transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"

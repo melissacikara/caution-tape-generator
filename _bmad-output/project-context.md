@@ -29,7 +29,7 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 - Do NOT re-implement any story marked `done` in `sprint-status.yaml`
 - Phase 1 planning docs (`prd.md`, `architecture.md`, `ux-design-specification.md`) are **historical** — they describe what shipped, not what to build now
 
-**What to work on next:** Epic 3 **done** (3-1–3-3). Next: Epic 4 (Library Redesign, depends on Epics 1 + 2 — both done).
+**What to work on next:** Epic 5 — story **5-5** (`private-tab-following-bucket`) is **`review`** in `sprint-status.yaml`. Next: human/code-review, then mark **5-5** `done` and close Epic 5 if no further stories.
 
 > After completing any story, update this "What to work on next" line before closing the session.
 
@@ -49,15 +49,19 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 | `_bmad-output/planning-artifacts/epics.md` | Epic and story definitions |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Live story status tracker |
 | `_bmad-output/implementation-artifacts/deferred-work.md` | Known tech debt — check before raising any issue in a code review |
-| `_bmad-output/brainstorming/brainstorming-session-2026-04-10-phase2.md` | Phase 2 design decisions |
+| `_bmad-output/brainstorming/brainstorming-session-2026-04-10-phase2.md` | **Authoritative Phase 2 scope** — all features to be built are defined here |
 
-### Sprint Status (as of 2026-04-12)
+> ⚠️ **`epics.md` was created before the Phase 2 brainstorming session and may not contain all Phase 2 scope.** The brainstorming doc is the authoritative feature list. Before starting any planning, story-creation, or sprint work, verify that `epics.md` accounts for every feature in the brainstorm. If a feature exists in the brainstorm but not in `epics.md`, that is a planning gap — not optional scope — and must be resolved before proceeding.
 
-- **Epic 1** (Identity & Login): **done** — all 4 stories complete (1-1, 1-2, 1-3, 1-4)
-- **Epic 6** (Tape Creation): **done** — all 4 stories complete (6-1, 6-2, 6-3, 6-4)
-- **Epic 2** (Ownership & Privacy): **done** — stories 2-1 through 2-5 complete
-- **Epic 3** (About Page & Front Door): **done** — stories 3-1 through 3-3 complete (About nav: logo + text link both to `/about` per decision B)
-- All other epics: backlog (Epics 4, 5 depend on Epic 1 + 2)
+### Sprint Status (as of 2026-04-13)
+
+- **Epic 1** (Identity & Login): **done** — stories 1-1 through 1-4
+- **Epic 2** (Ownership & Privacy): **done** — stories 2-1 through 2-5
+- **Epic 3** (About Page & Front Door): **done** — stories 3-1 through 3-3
+- **Epic 6** (Tape Creation Improvements): **done** — stories 6-1 through 6-4
+- **Epic 4** (Polish & Responsive): **done** — all stories 4-1 through 4-5 complete
+- **Epic 5** (Library Redesign): **in-progress** — 5-1–5-4 **done**; **5-5** in **`review`** (depends on Epics 1 + 2 ✅)
+- **Epic 7** (Notifications & Following): **backlog** — depends on Epics 1 + 5
 
 ### How to Pick the Next Story
 
@@ -241,6 +245,11 @@ Check `_bmad-output/implementation-artifacts/deferred-work.md` before flagging a
 - DB error messages leak raw Postgres details in `DATABASE_ERROR` responses
 - CORS wildcard (`*`) on all Edge Function mutation endpoints
 
+### Planning Artifact Rules (never violate)
+
+- **Never overwrite or delete content in planning artifacts** (`epics.md`, `sprint-status.yaml`, `project-context.md`) unless the user explicitly asks to change or remove something specific — these files are append-only by default
+- **Never resolve a conflict between planning artifacts unilaterally** — if two sources disagree (e.g. sprint-status has stories not in `epics.md`, or vice versa), stop, describe the exact inconsistency, and ask the user which is correct before touching anything
+
 ### No-Go Patterns
 
 - Do NOT add `App.tsx` — entry is `main.tsx` → `router.tsx` → `AppLayout` → pages
@@ -269,4 +278,4 @@ Check `_bmad-output/implementation-artifacts/deferred-work.md` before flagging a
 - Update the Technology Stack section when dependencies change
 - Review deferred-work.md periodically and promote items to stories when ready
 
-_Last updated: 2026-04-11_
+_Last updated: 2026-04-13 (5-5 implementation complete, in review)_

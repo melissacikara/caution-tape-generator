@@ -168,3 +168,59 @@ export async function reportTape(body: ReportTapeBody): Promise<ReportTapeRespon
   })
   return parseJson<ReportTapeResponse>(res)
 }
+
+export async function listPublicScenarios(): Promise<ListScenariosResponse> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+  const res = await fetch(supabaseFunctionUrl('list-public-scenarios'), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  })
+  return parseJson<ListScenariosResponse>(res)
+}
+
+export async function listMyScenarios(): Promise<ListScenariosResponse> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+  const res = await fetch(supabaseFunctionUrl('list-my-scenarios'), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  })
+  return parseJson<ListScenariosResponse>(res)
+}
+
+export async function listInvitedScenarios(): Promise<ListScenariosResponse> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+  const res = await fetch(supabaseFunctionUrl('list-invited-scenarios'), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  })
+  return parseJson<ListScenariosResponse>(res)
+}
+
+export async function listFollowedScenarios(): Promise<ListScenariosResponse> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+  const res = await fetch(supabaseFunctionUrl('list-followed-scenarios'), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  })
+  return parseJson<ListScenariosResponse>(res)
+}

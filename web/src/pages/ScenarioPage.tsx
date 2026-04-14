@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import {
@@ -31,6 +31,18 @@ function isPersistedTape(tape: TapeDto): boolean {
 
 const DEFAULT_TAPE_COLOR = '#FFD000'
 
+/** Stable primitive props so `TapeRenderer` memo skips rows when typing in add/edit panels (4-2). */
+const ScenarioTapePreview = memo(function ScenarioTapePreview({
+  tapeText,
+  color,
+}: {
+  tapeText: string
+  color: string
+}) {
+  return <TapeRenderer text={tapeText} color={color} state="generated" />
+})
+ScenarioTapePreview.displayName = 'ScenarioTapePreview'
+
 export function ScenarioPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
@@ -56,6 +68,9 @@ export function ScenarioPage() {
   const [confirmMakePublic, setConfirmMakePublic] = useState(false)
   const [reportedTapeIds, setReportedTapeIds] = useState<Set<string>>(() => new Set())
   const [reportingTapeId, setReportingTapeId] = useState<string | null>(null)
+
+  const deferredEditText = useDeferredValue(editText)
+  const deferredNewText = useDeferredValue(newText)
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined' || !slug) return ''
@@ -602,11 +617,7 @@ export function ScenarioPage() {
         <ul className="mt-8 flex flex-col gap-6" aria-label="Tape stack">
           {tapes.map((tape) => (
             <li key={tape.id}>
-              <TapeRenderer
-                text={tape.tapeText}
-                color={tape.color}
-                state="generated"
-              />
+              <ScenarioTapePreview tapeText={tape.tapeText} color={tape.color} />
               {(isPersistedTape(tape) && (canEditTape(tape) || scenario.isPublic)) ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {canEditTape(tape) && (
@@ -729,9 +740,9 @@ export function ScenarioPage() {
                 <p className="font-ui text-xs font-medium uppercase tracking-wide text-foreground">Preview</p>
                 <div className="overflow-x-auto border border-border bg-surface p-3">
                   <TapeRenderer
-                    text={editText}
+                    text={deferredEditText}
                     color={editColor}
-                    state={editText.trim().length === 0 ? 'empty' : 'live'}
+                    state={deferredEditText.trim().length === 0 ? 'empty' : 'live'}
                   />
                 </div>
               </div>
@@ -780,9 +791,9 @@ export function ScenarioPage() {
                 <p className="font-ui text-xs font-medium uppercase tracking-wide text-foreground">Preview</p>
                 <div className="overflow-x-auto border border-border bg-surface p-3">
                   <TapeRenderer
-                    text={newText}
+                    text={deferredNewText}
                     color={newColor}
-                    state={newText.trim().length === 0 ? 'empty' : 'live'}
+                    state={deferredNewText.trim().length === 0 ? 'empty' : 'live'}
                   />
                 </div>
               </div>

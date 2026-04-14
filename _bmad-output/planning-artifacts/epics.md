@@ -731,3 +731,235 @@ So that a small tool doesn’t become trivially abusable (NFR5–NFR7, NFR12–N
 **Given** Edge limits,
 **When** exercising rate limits and max length,
 **Then** behavior matches documented limits and returns stable error codes/messages for the UI.
+
+---
+
+## Epic 5: Library redesign — two-tab public and private
+
+The library becomes the social surface of the app. A public tab lets any visitor (logged out or in) browse all public scenarios. A private tab shows the authenticated user's personal collection in three progressive buckets: scenarios they created, scenarios they were invited to, and public scenarios they've chosen to follow. Empty buckets do not render — the UI grows with the user.
+
+**FRs covered:** FR15, FR16, FR17, FR18 (library surface and navigation); FR14 (back navigation from scenario to library).
+
+**Depends on:** Epics 1 (identity) + 2 (public/private model).
+
+**Brainstorm source:** Decisions #9 (Two-Tab Library), #11 (Three Buckets, Progressive Disclosure), #8 (One Homepage for Everyone — top 3 public scenarios on home).
+
+### Story 5.1: Two-tab library shell and routing
+
+As a user,
+I want the Library to have a Public tab and a Private tab,
+So that I can browse community scenarios or focus on my own collection (brainstorm #9).
+
+**Acceptance Criteria:**
+
+**Given** any user (logged in or out),
+**When** I navigate to the Library,
+**Then** I see two tabs: **Public** and **Private**,
+**And** the Public tab is the default and active on load.
+
+**Given** a logged-out user,
+**When** I click the Private tab,
+**Then** I see a friendly prompt to log in or create an account — no error state.
+
+**Given** a logged-in user,
+**When** I click the Private tab,
+**Then** I see my personal collection (stories 5.3–5.5).
+
+### Story 5.2: Public scenarios feed
+
+As a visitor,
+I want to browse all public scenarios in the Public tab,
+So that I can discover what others have made without needing an account (FR15, FR16).
+
+**Acceptance Criteria:**
+
+**Given** the Public tab,
+**When** public scenarios exist,
+**Then** they display as scenario cards (name + tape count provocative line) in the same grid style as the existing library (1 col mobile → 2 col at `sm+`),
+**And** each card links to the scenario route (`/s/:slug`).
+
+**Given** a logged-out visitor,
+**When** I view the public feed,
+**Then** I can browse and open scenarios but any action requiring login (add tape, follow) triggers the login gate.
+
+**Given** no public scenarios yet,
+**When** the feed loads,
+**Then** an appropriate empty state is shown (on-brand copy).
+
+### Story 5.3: Private tab — My Scenarios bucket
+
+As a logged-in creator,
+I want to see the scenarios I created in my Private tab,
+So that I can quickly return to my own boards (brainstorm #11).
+
+**Acceptance Criteria:**
+
+**Given** the Private tab,
+**When** I have created at least one scenario,
+**Then** a **My Scenarios** bucket renders with cards for each scenario I own (public or private).
+
+**Given** I have created no scenarios,
+**When** I view the Private tab,
+**Then** the My Scenarios bucket does not render (progressive disclosure — empty buckets are hidden).
+
+**Given** a My Scenarios card,
+**When** I activate it,
+**Then** I navigate to that scenario's route.
+
+### Story 5.4: Private tab — Invited bucket
+
+As a logged-in user,
+I want to see private scenarios I was invited to (via link) in my Private tab,
+So that I can return to collaborative boards I've joined (brainstorm #11).
+
+**Acceptance Criteria:**
+
+**Given** the Private tab,
+**When** I have accessed at least one private scenario via its link,
+**Then** an **Invited** bucket renders with cards for those scenarios.
+
+**Given** I have not accessed any private scenarios via link,
+**When** I view the Private tab,
+**Then** the Invited bucket does not render.
+
+### Story 5.5: Private tab — Following bucket
+
+As a logged-in user,
+I want to see public scenarios I've chosen to follow in my Private tab,
+So that I can return to community scenarios I care about (brainstorm #6, #11).
+
+**Acceptance Criteria:**
+
+**Given** the Private tab,
+**When** I am following at least one public scenario,
+**Then** a **Following** bucket renders with cards for those scenarios.
+
+**Given** I am following no scenarios,
+**When** I view the Private tab,
+**Then** the Following bucket does not render.
+
+**Given** a Following card,
+**When** I activate it,
+**Then** I navigate to that scenario's route.
+
+---
+
+## Epic 6: Tape creation improvements
+
+Enhancements and bug fixes to the tape creation experience. Mobile color picker inconsistency fixed, unified preset swatches across devices, support for long tape text, and a save-to-camera-roll export. **All stories in this epic are done** — documented here for completeness.
+
+**FRs covered:** FR1 (live preview), FR3 (color selection), FR5 (length scaling), FR8 (color rendering).
+
+**Fully standalone** — no dependencies on other epics; shipped in parallel with Epics 1–3.
+
+**Brainstorm source:** Decisions #12 (Mobile Color Bug Fix), #13–14 (Unified Presets), #15 (Long Tape), #16 (Save to Camera Roll).
+
+### Story 6.1: Mobile color picker bug fix
+
+As a mobile user,
+I want the color picker to open initialized to the current tape color,
+So that it behaves consistently with desktop (brainstorm #12, bug fix).
+
+_Status: done._
+
+### Story 6.2: Unified color preset swatches
+
+As a user,
+I want the same preset color swatches on both mobile and desktop,
+So that the experience is consistent across devices (brainstorm #13–14).
+
+_Status: done._
+
+### Story 6.3: Long tape text support
+
+As a user,
+I want to type a long warning and have the tape grow to accommodate it,
+So that unhinged manifestos are fully readable (brainstorm #15).
+
+_Status: done._
+
+### Story 6.4: Save tape to camera roll
+
+As a user,
+I want a single button that exports my tape as an image to my camera roll,
+So that I can share or keep it instantly (brainstorm #16).
+
+_Status: done._
+
+---
+
+## Epic 7: Notifications and following
+
+Users can passively track activity on scenarios they care about via a quiet in-app badge system. Following a public scenario adds it to the Following bucket in the private library tab and enables the same badge. No push notifications, no email — respectful of attention, anti-spam by default.
+
+**Depends on:** Epics 1 (identity) + 5 (library — Following bucket must exist).
+
+**Brainstorm source:** Decisions #5 (Quiet Badge), #6 (Follow = Bookmark + Badge), #10 (Opportunistic Follow Prompt).
+
+### Story 7.1: Activity tracking and badge data model
+
+As a developer,
+I want a data model that tracks new activity on scenarios a user cares about,
+So that the quiet badge has something to read (brainstorm #5).
+
+**Acceptance Criteria:**
+
+**Given** a scenario the user created, was invited to, or is following,
+**When** a new tape is added since the user's last visit,
+**Then** the backend records unread activity against that user + scenario pair,
+**And** the data model supports efficient badge queries without full scenario loads.
+
+### Story 7.2: Quiet badge on scenario cards
+
+As a logged-in user,
+I want a subtle badge on scenario cards that have new activity since my last visit,
+So that I know where the action is without being notified (brainstorm #5).
+
+**Acceptance Criteria:**
+
+**Given** a scenario card in any library bucket (My Scenarios, Invited, Following),
+**When** there is new activity since my last visit,
+**Then** a quiet badge indicator appears on the card,
+**And** the badge clears when I open the scenario.
+
+**Given** no new activity,
+**When** I view a scenario card,
+**Then** no badge is shown — default state is always clean.
+
+### Story 7.3: Follow and unfollow a public scenario
+
+As a logged-in user,
+I want to follow a public scenario I care about,
+So that it appears in my Following bucket with badge coverage (brainstorm #6).
+
+**Acceptance Criteria:**
+
+**Given** a public scenario view,
+**When** I am logged in and not the creator,
+**Then** a Follow button is visible.
+
+**Given** I click Follow,
+**When** the action succeeds,
+**Then** the scenario appears in my Following bucket in the private library tab,
+**And** the button changes to Unfollow.
+
+**Given** I click Unfollow,
+**When** the action succeeds,
+**Then** the scenario is removed from my Following bucket,
+**And** any unread badge for that scenario is cleared.
+
+### Story 7.4: Opportunistic follow prompt
+
+As a logged-in user who just added a tape to a public scenario,
+I want a single, non-forced prompt asking if I'd like to follow it,
+So that I can opt in at peak engagement without ever being nagged (brainstorm #10).
+
+**Acceptance Criteria:**
+
+**Given** I have just successfully added a tape to a public scenario I don't already follow,
+**When** the add succeeds,
+**Then** a single prompt appears: "Want to follow this scenario?" with Follow / No thanks options.
+
+**Given** I dismiss or decline the prompt,
+**When** I add another tape to the same scenario,
+**Then** the prompt does not appear again — never repeated.

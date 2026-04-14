@@ -18,3 +18,12 @@ verify_jwt = false
 
 [functions.delete-tape]
 verify_jwt = false
+
+[functions.list-my-scenarios]
+verify_jwt = false
+
+[functions.list-invited-scenarios]
+verify_jwt = false
+
+[functions.list-followed-scenarios]
+verify_jwt = false

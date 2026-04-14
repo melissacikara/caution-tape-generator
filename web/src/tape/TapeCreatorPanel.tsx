@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 
 import { LoginModal } from '../components/LoginModal'
 import { useLoginGate } from '../hooks/useLoginGate'
@@ -36,10 +36,14 @@ export function TapeCreatorPanel({
 
   const isLocked = lockedTape !== null
 
-  const previewText = isLocked ? lockedTape.text : warningText
-  const previewColor = isLocked ? lockedTape.color : tapeColor
+  const deferredWarningText = useDeferredValue(warningText)
+  /** Input stays synchronous; preview defers under CPU load so typing stays responsive (story 4-2). */
+  const previewText =
+    isLocked && lockedTape !== null ? lockedTape.text : deferredWarningText
+  const previewColor =
+    isLocked && lockedTape !== null ? lockedTape.color : tapeColor
   const previewState =
-    isLocked ? 'generated' : warningText.trim().length === 0 ? 'empty' : 'live'
+    isLocked ? 'generated' : deferredWarningText.trim().length === 0 ? 'empty' : 'live'
 
   const handleGenerate = () => {
     const t = warningText.trim()
