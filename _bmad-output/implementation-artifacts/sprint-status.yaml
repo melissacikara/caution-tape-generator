@@ -1,5 +1,5 @@
 # generated: 2026-04-10
-# last_updated: 2026-04-13 (5-5 review)
+# last_updated: 2026-04-15 (Epic 7 stories 7-1–7-4 done)
 # project: caution-bmad
 # project_key: NOKEY
 # tracking_system: file-system
@@ -36,9 +36,9 @@
 
 # PHASE 2 SPRINT — active branch: phase2
 # Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
-# Next up: story 1-4 (Epic 1), then 6-3 (Epic 6).
+# Epic 7 complete (2026-04-15). Phase 2 epic backlog: verify deploy + any follow-up from brainstorming.
 generated: "2026-04-10"
-last_updated: "2026-04-13"  # 5-5 review
+last_updated: "2026-04-15"  # Epic 7 complete
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -84,12 +84,12 @@ development_status:
 
   # ─── Epic 5: Library Redesign — two-tab public and private ──────────────────
   # Depends on Epics 1 + 2. Public tab (community feed) + Private tab (3 buckets).
-  epic-5: in-progress
+  epic-5: done
   5-1-two-tab-library-structure-and-shell: done
   5-2-public-scenarios-feed: done
   5-3-private-tab-my-scenarios-bucket: done
   5-4-private-tab-invited-bucket: done
-  5-5-private-tab-following-bucket: review
+  5-5-private-tab-following-bucket: done
   epic-5-retrospective: optional
 
   # ─── Epic 6: Tape Creation Improvements ──────────────────────────────────────
@@ -103,9 +103,9 @@ development_status:
 
   # ─── Epic 7: Notifications and following ─────────────────────────────────────
   # Depends on Epics 1 + 5 (Following bucket must exist in library first).
-  epic-7: backlog
-  7-1-activity-tracking-and-badge-data-model: backlog
-  7-2-quiet-badge-on-scenario-cards: backlog
-  7-3-follow-and-unfollow-a-public-scenario: backlog
-  7-4-opportunistic-follow-prompt: backlog
+  epic-7: done
+  7-1-activity-tracking-and-badge-data-model: done
+  7-2-quiet-badge-on-scenario-cards: done
+  7-3-follow-and-unfollow-a-public-scenario: done
+  7-4-opportunistic-follow-prompt: done
   epic-7-retrospective: optional

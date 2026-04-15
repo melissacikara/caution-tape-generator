@@ -10,4 +10,6 @@ export const scenarioKeys = {
   invitedScenarios: (userId: string) => [...scenarioKeys.all, 'invited', userId] as const,
   /** Public scenarios the user follows; userId prevents cross-account cache leaks. */
   followingScenarios: (userId: string) => [...scenarioKeys.all, 'following', userId] as const,
+  /** Scenario IDs with unread activity for the signed-in user; userId prevents cross-account cache leaks. */
+  unread: (userId: string) => [...scenarioKeys.all, 'unread', userId] as const,
 }

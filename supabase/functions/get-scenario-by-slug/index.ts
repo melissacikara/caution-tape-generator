@@ -66,8 +66,24 @@ serve(async (req) => {
     return jsonError('DATABASE_ERROR', tErr.message, 500)
   }
 
+  let viewerFollowsScenario = false
+  if (userId) {
+    const { data: followRow, error: foErr } = await supabase
+      .from('scenario_follows')
+      .select('user_id')
+      .eq('user_id', userId)
+      .eq('scenario_id', scenario.id)
+      .maybeSingle()
+
+    if (foErr) {
+      return jsonError('DATABASE_ERROR', foErr.message, 500)
+    }
+    viewerFollowsScenario = followRow !== null
+  }
+
   return jsonOk({
     scenario: mapScenario(scenario),
     tapes: (tapeRows ?? []).map(mapTape),
+    ...(userId ? { viewerFollowsScenario } : {}),
   })
 })

@@ -86,6 +86,10 @@
 
 - **`list-my-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.
 
+## Deferred from: code review of 5-5-private-tab-following-bucket.md (2026-04-15)
+
+- **`list-followed-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `fErr.message` / `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.
+
 ## Deferred from: code review of 5-4-private-tab-invited-bucket.md (2026-04-13)
 
 - **`list-invited-scenarios` surfaces raw DB errors in `DATABASE_ERROR` responses:** Uses `iErr.message` / `sErr.message` / `tErr.message` like other Edge Functions. Address with the broader “DB error leakage” / generic server messages work already tracked in this file.

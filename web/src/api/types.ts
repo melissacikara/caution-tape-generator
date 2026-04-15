@@ -31,6 +31,8 @@ export type CreateScenarioResponse = {
 export type GetScenarioResponse = {
   scenario: ScenarioDto
   tapes: TapeDto[]
+  /** Present when the request was authenticated; whether this user follows this scenario. */
+  viewerFollowsScenario?: boolean
 }
 
 export type AddTapeBody = {
@@ -98,6 +100,34 @@ export type ScenarioSummaryItem = {
 
 export type ListScenariosResponse = {
   scenarios: ScenarioSummaryItem[]
+}
+
+export type ListUnreadScenariosResponse = {
+  scenarioIds: string[]
+}
+
+export type MarkScenarioReadBody = {
+  scenarioSlug: string
+}
+
+export type MarkScenarioReadResponse = {
+  ok: boolean
+}
+
+export type FollowScenarioBody = {
+  scenarioSlug: string
+}
+
+export type FollowScenarioResponse = {
+  ok: boolean
+}
+
+export type UnfollowScenarioBody = {
+  scenarioSlug: string
+}
+
+export type UnfollowScenarioResponse = {
+  ok: boolean
 }
 
 export type ReportTapeBody = {

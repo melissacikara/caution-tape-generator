@@ -7,12 +7,19 @@ import type {
   DeleteScenarioResponse,
   DeleteTapeBody,
   DeleteTapeResponse,
+  FollowScenarioBody,
+  FollowScenarioResponse,
   GetScenarioResponse,
   ListScenariosResponse,
+  ListUnreadScenariosResponse,
+  MarkScenarioReadBody,
+  MarkScenarioReadResponse,
   ReportTapeBody,
   ReportTapeResponse,
   ToggleScenarioVisibilityBody,
   ToggleScenarioVisibilityResponse,
+  UnfollowScenarioBody,
+  UnfollowScenarioResponse,
   UpdateScenarioBody,
   UpdateScenarioResponse,
   UpdateTapeBody,
@@ -223,4 +230,46 @@ export async function listFollowedScenarios(): Promise<ListScenariosResponse> {
     },
   })
   return parseJson<ListScenariosResponse>(res)
+}
+
+export async function listUnreadScenarios(): Promise<ListUnreadScenariosResponse> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  const { data: { session } } = await supabaseClient.auth.getSession()
+  const token = session?.access_token ?? anon
+  const res = await fetch(supabaseFunctionUrl('list-unread-scenarios'), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  })
+  return parseJson<ListUnreadScenariosResponse>(res)
+}
+
+export async function markScenarioRead(
+  body: MarkScenarioReadBody,
+): Promise<MarkScenarioReadResponse> {
+  const res = await supabaseFetch('mark-scenario-read', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<MarkScenarioReadResponse>(res)
+}
+
+export async function followScenario(body: FollowScenarioBody): Promise<FollowScenarioResponse> {
+  const res = await supabaseFetch('follow-scenario', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<FollowScenarioResponse>(res)
+}
+
+export async function unfollowScenario(
+  body: UnfollowScenarioBody,
+): Promise<UnfollowScenarioResponse> {
+  const res = await supabaseFetch('unfollow-scenario', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return parseJson<UnfollowScenarioResponse>(res)
 }

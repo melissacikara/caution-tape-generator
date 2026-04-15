@@ -47,6 +47,12 @@ const queryStubs = vi.hoisted(() => ({
     error: null as Error | null,
     refetch: vi.fn(),
   },
+  unread: {
+    data: undefined as undefined | { scenarioIds: string[] },
+    isLoading: false,
+    error: null as Error | null,
+    refetch: vi.fn(),
+  },
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -75,6 +81,7 @@ vi.mock('../api/client', () => ({
   listMyScenarios: vi.fn(),
   listInvitedScenarios: vi.fn(),
   listFollowedScenarios: vi.fn(),
+  listUnreadScenarios: vi.fn(),
   isSupabaseConfigured: vi.fn(() => true),
   ApiError: class ApiError extends Error {
     code: string
@@ -121,6 +128,12 @@ function resetQueryStubs() {
     error: null,
     refetch: vi.fn(),
   }
+  queryStubs.unread = {
+    data: undefined,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }
 }
 
 describe('LibraryPage', () => {
@@ -142,6 +155,9 @@ describe('LibraryPage', () => {
       }
       if (Array.isArray(key) && key.includes('following')) {
         return { ...queryStubs.following } as ReturnType<typeof useQuery>
+      }
+      if (Array.isArray(key) && key.includes('unread')) {
+        return { ...queryStubs.unread } as ReturnType<typeof useQuery>
       }
       return { ...queryStubs.public } as ReturnType<typeof useQuery>
     })
@@ -269,6 +285,7 @@ describe('LibraryPage', () => {
 
       expect(screen.getByRole('heading', { name: /^my scenarios$/i })).toBeInTheDocument()
       expect(screen.getByText(/you haven't created any scenarios yet/i)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /create your own/i })).toHaveAttribute('href', '/create')
     })
 
     it('renders My Scenarios heading and card link when one owned scenario exists', async () => {
@@ -295,6 +312,34 @@ describe('LibraryPage', () => {
 
       expect(screen.getByRole('heading', { name: /^my scenarios$/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /my board/i })).toHaveAttribute('href', '/s/my-board')
+    })
+
+    it('shows quiet badge on a My Scenario card when its id is in the unread list', async () => {
+      authStub.state.user = { id: 'u1', email: 'me@example.com' } as User
+      queryStubs.mine.data = {
+        scenarios: [
+          {
+            scenario: {
+              id: 's-owned-unread',
+              publicSlug: 'my-board',
+              name: 'My Board',
+              isPublic: false,
+              ownerId: 'u1',
+              createdAt: '2026-01-01T00:00:00Z',
+            },
+            tapeCount: 2,
+          },
+        ],
+      }
+      queryStubs.mine.isLoading = false
+      queryStubs.unread.data = { scenarioIds: ['s-owned-unread'] }
+      queryStubs.unread.isLoading = false
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(screen.getByRole('tab', { name: /private/i }))
+
+      expect(screen.getByLabelText(/new activity/i)).toBeInTheDocument()
     })
 
     it('mine query error shows Retry that refetches the mine query', async () => {
@@ -410,7 +455,7 @@ describe('LibraryPage', () => {
       expect(container.querySelectorAll('[aria-busy="true"]').length).toBeGreaterThanOrEqual(1)
     })
 
-    it('shows Following heading and empty copy when following returns empty', async () => {
+    it('shows Following bucket with empty message when following returns empty', async () => {
       authStub.state.user = { id: 'u1', email: 'me@example.com' } as User
       queryStubs.following.data = { scenarios: [] }
       queryStubs.following.isLoading = false
@@ -420,7 +465,9 @@ describe('LibraryPage', () => {
       await user.click(screen.getByRole('tab', { name: /private/i }))
 
       expect(screen.getByRole('heading', { name: /^following$/i })).toBeInTheDocument()
-      expect(screen.getByText(/you're not following any scenarios yet/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/you're not following any scenarios yet/i),
+      ).toBeInTheDocument()
     })
 
     it('renders Following heading and card link when one followed scenario exists', async () => {

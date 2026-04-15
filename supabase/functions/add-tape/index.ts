@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 
+import { markUnreadForNewTape } from '../_shared/activityUnread.ts'
 import { extractUserId } from '../_shared/auth.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { jsonError, jsonOk } from '../_shared/errors.ts'
@@ -109,6 +110,12 @@ serve(async (req) => {
       console.warn('idempotency insert', idemErr.message)
     }
   }
+
+  await markUnreadForNewTape(supabase, {
+    scenarioId: scenario.id,
+    tapeAuthorId: (tape.author_id as string | null) ?? null,
+    tapeCreatedAt: tape.created_at as string,
+  })
 
   return jsonOk({ tape: mapTape(tape), idempotent: false })
 })

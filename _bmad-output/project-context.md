@@ -29,7 +29,7 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 - Do NOT re-implement any story marked `done` in `sprint-status.yaml`
 - Phase 1 planning docs (`prd.md`, `architecture.md`, `ux-design-specification.md`) are **historical** — they describe what shipped, not what to build now
 
-**What to work on next:** Epic 5 — story **5-5** (`private-tab-following-bucket`) is **`review`** in `sprint-status.yaml`. Next: human/code-review, then mark **5-5** `done` and close Epic 5 if no further stories.
+**What to work on next:** **Human review / pre-ship pass** on `phase2` (UX copy, edge cases, checklist). Epics in `sprint-status.yaml` are **done**; optional: Epic 7 retro, reconcile `epics.md` with `brainstorming-session-2026-04-10-phase2.md`, then merge or release when satisfied. Quiet badge has **no push notifications** — validate manually with two accounts (see agent reply “Testing the quiet badge”).
 
 > After completing any story, update this "What to work on next" line before closing the session.
 
@@ -53,15 +53,15 @@ _Critical rules and patterns for implementing code in this project. Focused on u
 
 > ⚠️ **`epics.md` was created before the Phase 2 brainstorming session and may not contain all Phase 2 scope.** The brainstorming doc is the authoritative feature list. Before starting any planning, story-creation, or sprint work, verify that `epics.md` accounts for every feature in the brainstorm. If a feature exists in the brainstorm but not in `epics.md`, that is a planning gap — not optional scope — and must be resolved before proceeding.
 
-### Sprint Status (as of 2026-04-13)
+### Sprint Status (as of 2026-04-15)
 
 - **Epic 1** (Identity & Login): **done** — stories 1-1 through 1-4
 - **Epic 2** (Ownership & Privacy): **done** — stories 2-1 through 2-5
 - **Epic 3** (About Page & Front Door): **done** — stories 3-1 through 3-3
 - **Epic 6** (Tape Creation Improvements): **done** — stories 6-1 through 6-4
 - **Epic 4** (Polish & Responsive): **done** — all stories 4-1 through 4-5 complete
-- **Epic 5** (Library Redesign): **in-progress** — 5-1–5-4 **done**; **5-5** in **`review`** (depends on Epics 1 + 2 ✅)
-- **Epic 7** (Notifications & Following): **backlog** — depends on Epics 1 + 5
+- **Epic 5** (Library Redesign): **done** — stories 5-1 through 5-5 (depends on Epics 1 + 2 ✅)
+- **Epic 7** (Notifications & Following): **done** — stories 7-1 through 7-4 (depends on Epics 1 + 5 ✅)
 
 ### How to Pick the Next Story
 
@@ -278,4 +278,4 @@ Check `_bmad-output/implementation-artifacts/deferred-work.md` before flagging a
 - Update the Technology Stack section when dependencies change
 - Review deferred-work.md periodically and promote items to stories when ready
 
-_Last updated: 2026-04-13 (5-5 implementation complete, in review)_
+_Last updated: 2026-04-15 (Epic 7 complete: follow/unfollow, opportunistic follow prompt, sprint docs updated)_

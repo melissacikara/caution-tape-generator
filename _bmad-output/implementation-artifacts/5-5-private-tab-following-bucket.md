@@ -1,6 +1,6 @@
 # Story 5.5: Private tab — Following bucket
 
-Status: review
+Status: done
 
 <!-- Ultimate context engine analysis completed — comprehensive developer guide created -->
 
@@ -27,7 +27,7 @@ So that I can return to community scenarios I care about (brainstorm #6, #11 —
 
 4. **Given** the Following query is loading,
    **When** the user is on the Private tab,
-   **Then** a skeleton loading state appears (`ScenarioLibrary` with `isLoading: true`, `aria-busy="true"` grid, **without** the "Following" heading until data loads — same pattern as My Scenarios / Invited).
+   **Then** the **Following** bucket uses the **same shell as My Scenarios / Invited**: a `<section>` with the **Following** heading and a skeleton loading state (`ScenarioLibrary` with `isLoading: true`, `aria-busy="true"` grid) beneath it.
 
 5. **Given** the Following fetch fails,
    **When** the error is surfaced,
@@ -77,11 +77,11 @@ So that I can return to community scenarios I care about (brainstorm #6, #11 —
     - `queryFn: listFollowedScenarios`
     - `queryKey: scenarioKeys.followingScenarios(user?.id ?? '__none__')`
     - `enabled: isSupabaseConfigured() && user !== null` (warm alongside other private queries)
-  - [x] **Progressive disclosure (critical — same as Invited / My Scenarios):**
-    - If `followingLoading` → `<ScenarioLibrary items={[]} isLoading />` (no `h2`)
-    - If `followingError` → `<ScenarioLibrary ... errorMessage={...} onRetry={() => void refetchFollowing()} />`
-    - If `!followingLoading && !followingError && (followingData?.scenarios ?? []).length === 0` → **render nothing**
-    - If length > 0 → `<section aria-labelledby="following-heading">` with `<h2 id="following-heading" className="font-display text-xl uppercase tracking-wide text-foreground">Following</h2>` + `<ScenarioLibrary items={followingData!.scenarios} isLoading={false} />`
+  - [x] **Progressive disclosure + loading shell (match Invited / My Scenarios — Option A, 2026-04-15):**
+    - If `followingLoading` → `<section aria-labelledby="following-heading">` + **Following** `<h2>` + `<ScenarioLibrary items={[]} isLoading />`
+    - If `followingError` → same section + `<h2>` + `<ScenarioLibrary ... errorMessage={...} onRetry={() => void refetchFollowing()} />`
+    - If `!followingLoading && !followingError && (followingData?.scenarios ?? []).length === 0` → **render nothing** (no empty-state copy)
+    - If length > 0 → same section + `<h2>` + `<ScenarioLibrary items={followingData!.scenarios} isLoading={false} />`
   - [x] Place the Following bucket **after** the Invited bucket (replace the `{/* Story 5.5: Following bucket */}` stub in `LibraryPage.tsx`)
   - [x] **Do not** pass `emptyMessage` or `zeroTapeCaption` for the Following bucket when showing cards — progressive disclosure means no empty list UI; optional `zeroTapeCaption` only if product copy matches other buckets with zero tapes (Invited omits both — **match Invited**)
 
@@ -90,7 +90,7 @@ So that I can return to community scenarios I care about (brainstorm #6, #11 —
   - [x] Extend `vi.mock('../api/client')` with `listFollowedScenarios: vi.fn()`
   - [x] Extend shared query stubs with a `following` stub object (mirror `invited` structure)
   - [x] Add tests:
-    - Logged-in, Private tab, **following** query loading → skeleton (`aria-busy`), no "Following" heading
+    - Logged-in, Private tab, **following** query loading → **Following** heading + skeleton (`aria-busy`), same as Invited
     - Logged-in, **following** returns `[]` → no heading, no empty-state copy
     - Logged-in, **following** returns one scenario → heading "Following" + link `href="/s/<slug>"`
     - **following** errors → inline error + Retry calls `refetchFollowing`
@@ -200,7 +200,7 @@ Composer (Cursor agent)
 
 - Added `scenario_follows` migration, `list-followed-scenarios` Edge Function (two-phase list + tape counts, `is_public` + not-owner filters), `verify_jwt = false` in config.
 - Wired `scenarioKeys.followingScenarios`, `listFollowedScenarios` GET client, fourth `useQuery` on `LibraryPage` after Invited with progressive disclosure, error copy + Retry.
-- Extended `LibraryPage.test.tsx` four-way query mock and added Following bucket tests. Full `npm test` in `web/`: 98 passed.
+- Extended `LibraryPage.test.tsx` four-way query mock and added Following bucket tests. Full `npm test` in `web/`: 99 passed.
 
 ### File List
 
@@ -217,7 +217,20 @@ Composer (Cursor agent)
 
 - 2026-04-13: Story context file created (`ready-for-dev`).
 - 2026-04-13: Implementation complete — DB, Edge Function, client, Library Following bucket, tests; status → `review`.
+- 2026-04-15: Code review — AC2 progressive disclosure fixed; **Option A** chosen for loading UX (Following shell matches Invited / My Scenarios); AC4 + Task 5 + tests aligned; status → `done`.
 
 ### Review Findings
 
-_(filled during code review)_
+**Code review closed (BMAD workflow, 2026-04-15).** Summary: 0 open `decision`, 0 open `patch`, 1 `defer`, 8 dismissed as noise or duplicate.
+
+#### Layer notes (abbreviated)
+
+- **Blind Hunter:** Flagged AC2 empty-bucket leak (fixed); AC4/Task wording tightened post-review; tests that baked in wrong empty behavior (fixed); `client.ts` mega-diff obscuring 5.5-focused review; raw `DATABASE_ERROR` messages; no integration coverage for the new Edge Function; 50-row cap and ordering tradeoffs as MVP limits; RLS footgun if future policies are sloppy.
+- **Edge Case Hunter:** Loading UX resolved per Option A (section + `h2` + skeleton).
+- **Acceptance Auditor:** ACs1–7 satisfied with implementation + tests after AC2 fix and spec alignment (A).
+
+#### Triage checklist
+
+- [x] [Review][Patch] Following bucket must not render when the followed list is empty after a successful fetch (AC2, progressive disclosure) — fixed in `web/src/pages/LibraryPage.tsx`; `LibraryPage.test.tsx` updated.
+- [x] [Review][Decision] **Following loading UX — Option A (Melissa, 2026-04-15):** Keep parity with Invited / My Scenarios — `<section>` + **Following** `<h2>` + skeleton while loading. AC4 and Task 5 updated to match.
+- [x] [Review][Defer] `list-followed-scenarios` returns raw DB text in `DATABASE_ERROR` — deferred, pre-existing pattern (`deferred-work.md`).

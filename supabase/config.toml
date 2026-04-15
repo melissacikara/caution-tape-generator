@@ -27,3 +27,15 @@ verify_jwt = false
 
 [functions.list-followed-scenarios]
 verify_jwt = false
+
+[functions.list-unread-scenarios]
+verify_jwt = false
+
+[functions.mark-scenario-read]
+verify_jwt = false
+
+[functions.follow-scenario]
+verify_jwt = false
+
+[functions.unfollow-scenario]
+verify_jwt = false

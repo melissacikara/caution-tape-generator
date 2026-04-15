@@ -7,10 +7,13 @@ import {
   addTape,
   deleteScenario,
   deleteTape,
+  followScenario,
   getScenarioBySlug,
   isSupabaseConfigured,
+  markScenarioRead,
   reportTape,
   toggleScenarioVisibility,
+  unfollowScenario,
   updateScenario,
   updateTape,
 } from '../api/client'
@@ -30,6 +33,26 @@ function isPersistedTape(tape: TapeDto): boolean {
 }
 
 const DEFAULT_TAPE_COLOR = '#FFD000'
+
+function followPromptDismissedStorageKey(scenarioId: string): string {
+  return `caution-bmad:follow-prompt-dismissed:${scenarioId}`
+}
+
+function isFollowPromptDismissed(scenarioId: string): boolean {
+  try {
+    return localStorage.getItem(followPromptDismissedStorageKey(scenarioId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistFollowPromptDismissed(scenarioId: string): void {
+  try {
+    localStorage.setItem(followPromptDismissedStorageKey(scenarioId), '1')
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Stable primitive props so `TapeRenderer` memo skips rows when typing in add/edit panels (4-2). */
 const ScenarioTapePreview = memo(function ScenarioTapePreview({
@@ -68,6 +91,7 @@ export function ScenarioPage() {
   const [confirmMakePublic, setConfirmMakePublic] = useState(false)
   const [reportedTapeIds, setReportedTapeIds] = useState<Set<string>>(() => new Set())
   const [reportingTapeId, setReportingTapeId] = useState<string | null>(null)
+  const [showFollowPrompt, setShowFollowPrompt] = useState(false)
 
   const deferredEditText = useDeferredValue(editText)
   const deferredNewText = useDeferredValue(newText)
@@ -79,6 +103,10 @@ export function ScenarioPage() {
 
   useEffect(() => {
     if (slug) rememberScenarioSlug(slug)
+  }, [slug])
+
+  useEffect(() => {
+    setShowFollowPrompt(false)
   }, [slug])
 
   /** Move focus into the creator textarea when add or edit panel opens. */
@@ -104,6 +132,18 @@ export function ScenarioPage() {
     queryFn: () => getScenarioBySlug(slug!),
     enabled: Boolean(slug) && configured,
   })
+
+  useEffect(() => {
+    if (!configured || !user || !slug || !scenarioQuery.isSuccess) return
+    void (async () => {
+      try {
+        await markScenarioRead({ scenarioSlug: slug })
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.unread(user.id) })
+      } catch {
+        // Quiet badge: opening the board should not fail the page if mark-read errors.
+      }
+    })()
+  }, [configured, queryClient, slug, scenarioQuery.isSuccess, user])
 
   const addMutation = useMutation({
     mutationFn: async (vars: { text: string; color: string; idempotencyKey: string }) => {
@@ -145,12 +185,25 @@ export function ScenarioPage() {
       if (!slug) return
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.bySlug(slug) })
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+      if (user) {
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.unread(user.id) })
+      }
     },
     onSuccess: () => {
       setNewText('')
       setNewColor(DEFAULT_TAPE_COLOR)
       setAddTapeIdempotencyKey(null)
       setAddOpen(false)
+      if (!user || !slug) return
+      const snapshot = queryClient.getQueryData<GetScenarioResponse>(scenarioKeys.bySlug(slug))
+      if (
+        snapshot?.scenario.isPublic === true &&
+        snapshot.scenario.ownerId !== user.id &&
+        snapshot.viewerFollowsScenario !== true &&
+        !isFollowPromptDismissed(snapshot.scenario.id)
+      ) {
+        setShowFollowPrompt(true)
+      }
     },
   })
 
@@ -338,6 +391,41 @@ export function ScenarioPage() {
     },
   })
 
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (!slug) throw new Error('Missing slug')
+      return followScenario({ scenarioSlug: slug })
+    },
+    onSuccess: () => {
+      setShowFollowPrompt(false)
+    },
+    onSettled: () => {
+      if (!slug) return
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.bySlug(slug) })
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+      if (user) {
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.followingScenarios(user.id) })
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.unread(user.id) })
+      }
+    },
+  })
+
+  const unfollowMutation = useMutation({
+    mutationFn: async () => {
+      if (!slug) throw new Error('Missing slug')
+      return unfollowScenario({ scenarioSlug: slug })
+    },
+    onSettled: () => {
+      if (!slug) return
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.bySlug(slug) })
+      void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
+      if (user) {
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.followingScenarios(user.id) })
+        void queryClient.invalidateQueries({ queryKey: scenarioKeys.unread(user.id) })
+      }
+    },
+  })
+
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   const copyShare = useCallback(async () => {
@@ -492,6 +580,16 @@ export function ScenarioPage() {
       ? toggleVisibilityMutation.error.message
       : toggleVisibilityMutation.error?.message
 
+  const followErr =
+    followMutation.error instanceof ApiError
+      ? followMutation.error.message
+      : followMutation.error?.message
+
+  const unfollowErr =
+    unfollowMutation.error instanceof ApiError
+      ? unfollowMutation.error.message
+      : unfollowMutation.error?.message
+
   return (
     <>
     <main className="flex justify-center px-4 pb-40 pt-8">
@@ -612,7 +710,76 @@ export function ScenarioPage() {
               {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'failed' ? 'Copy failed' : 'Copy link'}
             </button>
           </div>
+          {scenario.isPublic && user !== null && !isScenarioOwner ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                disabled={followMutation.isPending || unfollowMutation.isPending}
+                onClick={() => {
+                  if (data.viewerFollowsScenario === true) {
+                    unfollowMutation.mutate()
+                  } else {
+                    followMutation.mutate()
+                  }
+                }}
+                className="min-h-[44px] border border-border px-4 font-ui text-xs uppercase tracking-wide text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+                aria-label={data.viewerFollowsScenario === true ? 'Unfollow scenario' : 'Follow scenario'}
+              >
+                {followMutation.isPending || unfollowMutation.isPending
+                  ? 'Updating…'
+                  : data.viewerFollowsScenario === true
+                    ? 'Unfollow'
+                    : 'Follow'}
+              </button>
+              {followErr && !showFollowPrompt ? (
+                <p className="mt-2 font-ui text-xs text-red-400" role="alert">
+                  {followErr}. Try again.
+                </p>
+              ) : null}
+              {unfollowErr ? (
+                <p className="mt-2 font-ui text-xs text-red-400" role="alert">
+                  {unfollowErr}. Try again.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </header>
+
+        {showFollowPrompt && user !== null && scenario.isPublic && !isScenarioOwner ? (
+          <div
+            className="mt-6 border border-border bg-surface-raised p-4"
+            role="region"
+            aria-label="Follow this scenario"
+          >
+            <p className="font-ui text-sm text-foreground">Want to follow this scenario?</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={followMutation.isPending}
+                onClick={() => followMutation.mutate()}
+                className="min-h-[44px] bg-accent px-4 font-ui text-xs font-semibold uppercase tracking-wide text-accent-text disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {followMutation.isPending ? 'Saving…' : 'Follow'}
+              </button>
+              <button
+                type="button"
+                disabled={followMutation.isPending}
+                onClick={() => {
+                  persistFollowPromptDismissed(scenario.id)
+                  setShowFollowPrompt(false)
+                }}
+                className="min-h-[44px] border border-border px-4 font-ui text-xs text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                No thanks
+              </button>
+            </div>
+            {followErr && showFollowPrompt ? (
+              <p className="mt-2 font-ui text-xs text-red-400" role="alert">
+                {followErr}. Try again.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <ul className="mt-8 flex flex-col gap-6" aria-label="Tape stack">
           {tapes.map((tape) => (

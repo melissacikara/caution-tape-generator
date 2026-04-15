@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import type { ScenarioSummaryItem } from '../api/types'
@@ -7,9 +8,11 @@ export type ScenarioLibraryProps = {
   isLoading: boolean
   errorMessage?: string
   onRetry?: () => void
-  emptyMessage?: string
+  emptyMessage?: ReactNode
   /** When set (e.g. community feed), replaces the default zero-tape line aimed at creators. */
   zeroTapeCaption?: string
+  /** Scenario IDs with unread activity (Epic 7 quiet badge); omit on feeds where badges are not shown. */
+  unreadScenarioIds?: ReadonlySet<string>
 }
 
 function provocativeLine(count: number, zeroTapeCaption?: string): string {
@@ -27,6 +30,7 @@ export function ScenarioLibrary({
   onRetry,
   emptyMessage = 'No scenarios found. Create one to get started.',
   zeroTapeCaption,
+  unreadScenarioIds,
 }: ScenarioLibraryProps) {
   if (isLoading) {
     return (
@@ -69,8 +73,14 @@ export function ScenarioLibrary({
         <li key={scenario.id}>
           <Link
             to={`/s/${scenario.publicSlug}`}
-            className="flex min-h-[44px] flex-col border border-border bg-surface-raised p-4 transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="relative flex min-h-[44px] flex-col border border-border bg-surface-raised p-4 pr-8 transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
+            {unreadScenarioIds?.has(scenario.id) ? (
+              <span
+                className="absolute right-3 top-3 h-2.5 w-2.5 shrink-0 rounded-full bg-accent ring-2 ring-surface-raised"
+                aria-label="New activity"
+              />
+            ) : null}
             <span className="font-display text-xl uppercase leading-tight tracking-wide text-foreground">
               {scenario.name}
             </span>

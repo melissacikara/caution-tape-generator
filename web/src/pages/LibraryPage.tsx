@@ -1,5 +1,6 @@
-import { startTransition, useState } from 'react'
+import { startTransition, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router'
 
 import { LoginModal } from '../components/LoginModal'
 import { ScenarioLibrary } from '../components/ScenarioLibrary'
@@ -12,6 +13,7 @@ import {
   listInvitedScenarios,
   listMyScenarios,
   listPublicScenarios,
+  listUnreadScenarios,
 } from '../api/client'
 import { scenarioKeys } from '../api/queryKeys'
 
@@ -60,6 +62,17 @@ export function LibraryPage() {
     queryFn: listFollowedScenarios,
     enabled: isSupabaseConfigured() && user !== null,
   })
+
+  const { data: unreadData } = useQuery({
+    queryKey: scenarioKeys.unread(user?.id ?? '__none__'),
+    queryFn: listUnreadScenarios,
+    enabled: isSupabaseConfigured() && user !== null,
+  })
+
+  const unreadIds = useMemo(
+    () => new Set(unreadData?.scenarioIds ?? []),
+    [unreadData?.scenarioIds],
+  )
 
   function switchTab(tab: 'public' | 'private') {
     startTransition(() => setActiveTab(tab))
@@ -182,7 +195,18 @@ export function LibraryPage() {
                           <ScenarioLibrary
                             items={myData?.scenarios ?? []}
                             isLoading={false}
-                            emptyMessage="You haven't created any scenarios yet."
+                            emptyMessage={
+                              <>
+                                You haven&apos;t created any scenarios yet.{' '}
+                                <Link
+                                  to="/create"
+                                  className="inline-flex min-h-[44px] items-center text-accent underline decoration-accent underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                >
+                                  Create your own!
+                                </Link>
+                              </>
+                            }
+                            unreadScenarioIds={unreadIds}
                           />
                         )}
                       </div>
@@ -215,6 +239,7 @@ export function LibraryPage() {
                             items={invitedData?.scenarios ?? []}
                             isLoading={false}
                             emptyMessage="No scenarios have been shared with you yet."
+                            unreadScenarioIds={unreadIds}
                           />
                         )}
                       </div>
@@ -246,7 +271,8 @@ export function LibraryPage() {
                           <ScenarioLibrary
                             items={followingData?.scenarios ?? []}
                             isLoading={false}
-                            emptyMessage="You're not following any scenarios yet."
+                            emptyMessage="You're not following any scenarios yet. Open a public board and use Follow to save it here."
+                            unreadScenarioIds={unreadIds}
                           />
                         )}
                       </div>
