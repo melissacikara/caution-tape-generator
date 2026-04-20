@@ -109,10 +109,11 @@ export function AppHeader() {
                     Library
                   </Link>
 
-                  {!loading && user === null ? (
+                  {user === null ? (
                     <button
                       type="button"
                       className={`${mobileItemClass} cursor-pointer border-t border-border`}
+                      aria-busy={loading}
                       onClick={() => {
                         closeMobileMenu()
                         setLoginOpen(true)
@@ -122,7 +123,7 @@ export function AppHeader() {
                     </button>
                   ) : null}
 
-                  {!loading && user !== null ? (
+                  {user !== null ? (
                     <>
                       <div className="border-t border-border px-4 py-2 font-ui text-xs text-muted">
                         <span className="block truncate" title={user.email ?? undefined}>
@@ -160,17 +161,18 @@ export function AppHeader() {
                 Library
               </Link>
 
-              {!loading && user === null ? (
+              {user === null ? (
                 <button
                   type="button"
                   onClick={() => setLoginOpen(true)}
                   className={`cursor-pointer ${navLinkClass}`}
+                  aria-busy={loading}
                 >
                   Log in
                 </button>
               ) : null}
 
-              {!loading && user !== null ? (
+              {user !== null ? (
                 <div className="flex min-w-0 items-center gap-3">
                   <span
                     className="max-w-[120px] truncate font-ui text-xs text-muted"

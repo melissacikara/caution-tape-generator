@@ -51,11 +51,16 @@ function supabaseFunctionUrl(functionName: string): string {
   return `${base}/functions/v1/${functionName}`
 }
 
-/** Fresh JWT for Edge Functions (same pattern for POST and GET). */
+/**
+ * JWT for Edge Function calls that need the caller’s identity (RLS or user-scoped logic).
+ * Uses session from memory first; refreshes only if missing. Avoids getUser() on every call —
+ * that extra round-trip added noticeable latency to list views.
+ */
 async function getBearerTokenForEdgeFunctions(): Promise<string> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  await supabaseClient.auth.getUser()
-  let { data: { session } } = await supabaseClient.auth.getSession()
+  let {
+    data: { session },
+  } = await supabaseClient.auth.getSession()
   if (!session) {
     const { data } = await supabaseClient.auth.refreshSession()
     session = data.session ?? null
@@ -186,13 +191,16 @@ export async function reportTape(body: ReportTapeBody): Promise<ReportTapeRespon
   return parseJson<ReportTapeResponse>(res)
 }
 
+/**
+ * Public scenario feed — Edge Function uses service role; no user session required.
+ * Using the anon key directly skips getSession()/refresh and cuts first-paint latency on Library.
+ */
 export async function listPublicScenarios(): Promise<ListScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-public-scenarios'), {
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${anon}`,
       apikey: anon,
     },
   })
