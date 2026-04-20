@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -43,6 +43,10 @@ function renderHeader() {
   )
 }
 
+async function openMobileMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /open menu/i }))
+}
+
 describe('AppHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -58,12 +62,7 @@ describe('AppHeader', () => {
     expect(logo).toHaveAttribute('href', '/')
   })
 
-  it('renders the Create nav link pointing to /', () => {
-    renderHeader()
-    expect(screen.getByRole('link', { name: /^create$/i })).toHaveAttribute('href', '/')
-  })
-
-  it('logo link carries responsive flex classes (flex-1 min-w-0 truncate) to prevent narrow-viewport overflow', () => {
+  it('logo link uses flex-1 min-w-0 truncate for narrow viewports', () => {
     renderHeader()
     const logo = screen.getByRole('link', { name: /caution tape generator/i })
     expect(logo.className).toContain('flex-1')
@@ -71,47 +70,88 @@ describe('AppHeader', () => {
     expect(logo.className).toContain('truncate')
   })
 
-  it('nav element carries shrink-0 so all nav items stay visible on narrow viewports', () => {
+  it('desktop nav carries gap-3 md:gap-5', () => {
     renderHeader()
-    const nav = screen.getByRole('navigation', { name: /main/i })
-    expect(nav.className).toContain('shrink-0')
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    expect(desktopNav.className).toContain('gap-3')
+    expect(desktopNav.className).toContain('md:gap-5')
   })
 
-  it('nav has responsive gap: gap-3 on mobile, md:gap-5 on desktop', () => {
+  it('renders mobile menu button', () => {
     renderHeader()
-    const nav = screen.getByRole('navigation', { name: /main/i })
-    expect(nav.className).toContain('gap-3')
-    expect(nav.className).toContain('md:gap-5')
+    expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
   })
 
-  it('renders the Library nav link pointing to /library', () => {
-    renderHeader()
-    expect(screen.getByRole('link', { name: /library/i })).toHaveAttribute('href', '/library')
-  })
-
-  it('renders the About nav link', () => {
-    renderHeader()
-    expect(screen.getAllByRole('link', { name: /about/i }).length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('shows Log in button when user is not signed in', () => {
-    renderHeader()
-    expect(screen.getByRole('button', { name: /log in/i })).toBeInTheDocument()
-  })
-
-  it('opens login modal when Log in is clicked', async () => {
+  it('mobile panel lists Create, About, Library after opening menu', async () => {
     const user = userEvent.setup()
     renderHeader()
-    await user.click(screen.getByRole('button', { name: /log in/i }))
+    expect(screen.queryByRole('region', { name: /site links/i })).not.toBeInTheDocument()
+    await openMobileMenu(user)
+    const region = screen.getByRole('region', { name: /site links/i })
+    expect(region).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('link', { name: /^create$/i }).some((el) => region.contains(el)),
+    ).toBe(true)
+    expect(
+      screen.getAllByRole('link', { name: /^about$/i }).some((el) => region.contains(el)),
+    ).toBe(true)
+    expect(
+      screen.getAllByRole('link', { name: /^library$/i }).some((el) => region.contains(el)),
+    ).toBe(true)
+  })
+
+  it('renders desktop Create link (hidden sm:flex row)', () => {
+    renderHeader()
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    const create = desktopNav.querySelector('a[href="/"]')
+    expect(create?.textContent).toMatch(/^create$/i)
+  })
+
+  it('renders the Library nav link on desktop', () => {
+    renderHeader()
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    const lib = Array.from(desktopNav?.querySelectorAll('a') ?? []).find((a) =>
+      /library/i.test(a.textContent ?? ''),
+    )
+    expect(lib).toHaveAttribute('href', '/library')
+  })
+
+  it('shows Log in on desktop and in mobile menu when not signed in', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    expect(desktopNav?.querySelector('button')?.textContent).toMatch(/log in/i)
+    await openMobileMenu(user)
+    expect(screen.getAllByRole('button', { name: /log in/i }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('opens login modal when Log in is clicked (desktop)', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    const logIn = desktopNav?.querySelector('button')
+    expect(logIn).toBeTruthy()
+    await user.click(logIn as HTMLButtonElement)
     expect(screen.getByRole('dialog', { name: /login/i })).toBeInTheDocument()
   })
 
-  it('when signed in: shows truncated email (with title) and Sign out, hides Log in', () => {
+  it('opens login modal when mobile menu Log in is clicked', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+    await openMobileMenu(user)
+    const panel = screen.getByRole('region', { name: /site links/i })
+    await user.click(within(panel).getByRole('button', { name: /^log in$/i }))
+    expect(screen.getByRole('dialog', { name: /login/i })).toBeInTheDocument()
+  })
+
+  it('when signed in: shows truncated email (with title) and Sign out on desktop, hides Log in', () => {
     const email = 'verylongaddress@example.com'
     authStub.state.user = { id: 'u1', email } as User
     renderHeader()
     expect(screen.queryByRole('button', { name: /log in/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    const signOut = desktopNav?.querySelector('button')
+    expect(signOut?.textContent).toMatch(/sign out/i)
     const label = screen.getByTitle(email)
     expect(label).toBeInTheDocument()
     expect(label.textContent).toContain('@')
@@ -119,20 +159,16 @@ describe('AppHeader', () => {
     expect(label.className).toContain('max-w-[120px]')
   })
 
-  it('when signed in: nav keeps shrink-0 and responsive gap for primary links', () => {
-    authStub.state.user = { id: 'u1', email: 'a@b.co' } as User
-    renderHeader()
-    const nav = screen.getByRole('navigation', { name: /main/i })
-    expect(nav.className).toContain('shrink-0')
-    expect(nav.className).toContain('gap-3')
-    expect(nav.className).toContain('md:gap-5')
-  })
-
   it('when signed in: Sign out invokes auth signOut', async () => {
     const user = userEvent.setup()
     authStub.state.user = { id: 'u1', email: 'a@b.co' } as User
     renderHeader()
-    await user.click(screen.getByRole('button', { name: /sign out/i }))
+    const desktopNav = screen.getByTestId('header-desktop-nav')
+    const signOutBtn = Array.from(desktopNav.querySelectorAll('button')).find((b) =>
+      /sign out/i.test(b.textContent ?? ''),
+    )
+    expect(signOutBtn).toBeTruthy()
+    await user.click(signOutBtn as HTMLButtonElement)
     expect(authStub.signOut).toHaveBeenCalledOnce()
   })
 })
