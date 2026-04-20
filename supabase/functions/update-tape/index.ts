@@ -3,8 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 
 import { extractUserId } from '../_shared/auth.ts'
-import { corsHeaders } from '../_shared/cors.ts'
-import { jsonError, jsonOk } from '../_shared/errors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { jsonDatabaseError, jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapTape } from '../_shared/map.ts'
 import { formatZodError } from '../_shared/zod.ts'
 
@@ -17,33 +17,33 @@ const bodySchema = z.object({
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: getCorsHeaders(req) })
   }
   if (req.method !== 'POST') {
-    return jsonError('METHOD_NOT_ALLOWED', 'Use POST', 405)
+    return jsonError(req, 'METHOD_NOT_ALLOWED', 'Use POST', 405)
   }
 
   let raw: unknown
   try {
     raw = await req.json()
   } catch {
-    return jsonError('BAD_REQUEST', 'Invalid JSON body', 400)
+    return jsonError(req, 'BAD_REQUEST', 'Invalid JSON body', 400)
   }
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
+    return jsonError(req, 'VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
   const userId = await extractUserId(req)
   if (!userId) {
-    return jsonError('UNAUTHORIZED', 'Login required', 401)
+    return jsonError(req, 'UNAUTHORIZED', 'Login required', 401)
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !key) {
-    return jsonError('SERVER_CONFIG', 'Missing Supabase env', 500)
+    return jsonError(req, 'SERVER_CONFIG', 'Missing Supabase env', 500)
   }
 
   const supabase = createClient(supabaseUrl, key)
@@ -56,10 +56,10 @@ serve(async (req) => {
     .maybeSingle()
 
   if (sErr) {
-    return jsonError('DATABASE_ERROR', sErr.message, 500)
+    return jsonDatabaseError(req, sErr)
   }
   if (!scenario) {
-    return jsonError('NOT_FOUND', 'Scenario not found', 404)
+    return jsonError(req, 'NOT_FOUND', 'Scenario not found', 404)
   }
 
   const { data: tapeRow, error: tErr } = await supabase
@@ -69,11 +69,11 @@ serve(async (req) => {
     .eq('scenario_id', scenario.id)
     .maybeSingle()
 
-  if (tErr) return jsonError('DATABASE_ERROR', tErr.message, 500)
-  if (!tapeRow) return jsonError('NOT_FOUND', 'Tape not found in this scenario', 404)
+  if (tErr) return jsonDatabaseError(req, tErr)
+  if (!tapeRow) return jsonError(req, 'NOT_FOUND', 'Tape not found in this scenario', 404)
 
   if (userId !== tapeRow.author_id && userId !== scenario.owner_id) {
-    return jsonError('FORBIDDEN', 'You do not have permission to modify this tape', 403)
+    return jsonError(req, 'FORBIDDEN', 'You do not have permission to modify this tape', 403)
   }
 
   const { data: rows, error: uErr } = await supabase
@@ -88,12 +88,12 @@ serve(async (req) => {
     .select('id, scenario_id, tape_text, color, author_id, created_at, updated_at')
 
   if (uErr) {
-    return jsonError('DATABASE_ERROR', uErr.message, 500)
+    return jsonDatabaseError(req, uErr)
   }
   const tape = rows?.[0]
   if (!tape) {
-    return jsonError('NOT_FOUND', 'Tape not found in this scenario', 404)
+    return jsonError(req, 'NOT_FOUND', 'Tape not found in this scenario', 404)
   }
 
-  return jsonOk({ tape: mapTape(tape) })
+  return jsonOk(req, { tape: mapTape(tape) })
 })

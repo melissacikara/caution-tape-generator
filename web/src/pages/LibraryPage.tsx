@@ -5,7 +5,7 @@ import { Link } from 'react-router'
 import { LoginModal } from '../components/LoginModal'
 import { ScenarioLibrary } from '../components/ScenarioLibrary'
 import { useLoginGate } from '../hooks/useLoginGate'
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '../providers/useAuth'
 import {
   ApiError,
   isSupabaseConfigured,
@@ -26,9 +26,14 @@ export function LibraryPage() {
     queryKey: scenarioKeys.publicFeed,
     queryFn: listPublicScenarios,
     enabled: isSupabaseConfigured(),
+    /** Public list is stable; avoid refetching on every navigation. */
+    staleTime: 60_000,
   })
 
   // Warm Private tab while on Public: fetch when logged in (same pattern as optional "fewer calls" alternative).
+  const privateBucketEnabled =
+    isSupabaseConfigured() && user !== null && activeTab === 'private'
+
   const {
     data: myData,
     isLoading: myLoading,
@@ -37,10 +42,9 @@ export function LibraryPage() {
   } = useQuery({
     queryKey: scenarioKeys.myScenarios(user?.id ?? '__none__'),
     queryFn: listMyScenarios,
-    enabled: isSupabaseConfigured() && user !== null,
+    enabled: privateBucketEnabled,
   })
 
-  // Invited bucket — warmed alongside My Scenarios when user is logged in.
   const {
     data: invitedData,
     isLoading: invitedLoading,
@@ -49,7 +53,7 @@ export function LibraryPage() {
   } = useQuery({
     queryKey: scenarioKeys.invitedScenarios(user?.id ?? '__none__'),
     queryFn: listInvitedScenarios,
-    enabled: isSupabaseConfigured() && user !== null,
+    enabled: privateBucketEnabled,
   })
 
   const {
@@ -60,13 +64,13 @@ export function LibraryPage() {
   } = useQuery({
     queryKey: scenarioKeys.followingScenarios(user?.id ?? '__none__'),
     queryFn: listFollowedScenarios,
-    enabled: isSupabaseConfigured() && user !== null,
+    enabled: privateBucketEnabled,
   })
 
   const { data: unreadData } = useQuery({
     queryKey: scenarioKeys.unread(user?.id ?? '__none__'),
     queryFn: listUnreadScenarios,
-    enabled: isSupabaseConfigured() && user !== null,
+    enabled: privateBucketEnabled,
   })
 
   const unreadIds = useMemo(
@@ -199,7 +203,7 @@ export function LibraryPage() {
                               <>
                                 You haven&apos;t created any scenarios yet.{' '}
                                 <Link
-                                  to="/create"
+                                  to="/"
                                   className="inline-flex min-h-[44px] items-center text-accent underline decoration-accent underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                                 >
                                   Create your own!

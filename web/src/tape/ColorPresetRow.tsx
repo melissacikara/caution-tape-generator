@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ColorPickerSwatch } from './ColorPickerSwatch'
 import { TAPE_PRESETS } from './tapePresets'
 
@@ -38,11 +38,11 @@ export function ColorPresetRow({
   className = '',
 }: ColorPresetRowProps) {
   const [showCustom, setShowCustom] = useState(() => !isPresetColor(value))
-
-  // Sync showCustom when the parent changes value externally (e.g. reset, load).
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
     setShowCustom(!isPresetColor(value))
-  }, [value])
+  }
 
   const handlePresetClick = (hex: string) => {
     if (disabled) return

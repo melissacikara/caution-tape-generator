@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TapeCreatorPanel } from './TapeCreatorPanel'
 
-vi.mock('../providers/AuthProvider', () => ({
+vi.mock('../providers/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, session: null, loading: false, signOut: vi.fn() }),
 }))
 
@@ -26,6 +26,7 @@ const mockExportTapeAsImage = vi.mocked(exportTapeAsImage)
 describe('TapeCreatorPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
   })
 
   it('enforces maxLength={2000} on the warning text input', () => {

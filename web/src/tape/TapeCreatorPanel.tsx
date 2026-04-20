@@ -2,7 +2,8 @@ import { useDeferredValue, useEffect, useState } from 'react'
 
 import { LoginModal } from '../components/LoginModal'
 import { useLoginGate } from '../hooks/useLoginGate'
-import { useAuth } from '../providers/AuthProvider'
+import { clearCreateFlowDraft, loadCreateFlowDraft, mergeCreateFlowDraft } from '../lib/createFlowStorage'
+import { useAuth } from '../providers/useAuth'
 import { ColorPickerSwatch } from './ColorPickerSwatch'
 import { exportTapeAsImage } from './exportTapeAsImage'
 import { TapeRenderer } from './TapeRenderer'
@@ -15,6 +16,8 @@ export type TapeCreatorPanelProps = {
   className?: string
   /** Called whenever the locked tape snapshot changes (including reset to null). */
   onLockedTapeChange?: (tape: { text: string; color: string } | null) => void
+  /** Called when the user resets the tape (clears draft persistence + scenario fields on the home flow). */
+  onTapeReset?: () => void
 }
 
 type LockedTape = { text: string; color: string }
@@ -26,13 +29,21 @@ type LockedTape = { text: string; color: string }
 export function TapeCreatorPanel({
   className = '',
   onLockedTapeChange,
+  onTapeReset,
 }: TapeCreatorPanelProps) {
   const { user } = useAuth()
   const { isLoginGateOpen, openLoginGate, closeLoginGate } = useLoginGate()
-  const [warningText, setWarningText] = useState('')
-  const [tapeColor, setTapeColor] = useState(DEFAULT_TAPE_COLOR)
-  const [lockedTape, setLockedTape] = useState<LockedTape | null>(null)
+  const [warningText, setWarningText] = useState(() => loadCreateFlowDraft().warningText)
+  const [tapeColor, setTapeColor] = useState(() => loadCreateFlowDraft().tapeColor)
+  const [lockedTape, setLockedTape] = useState<LockedTape | null>(
+    () => loadCreateFlowDraft().lockedTape,
+  )
   const [exportError, setExportError] = useState<string | null>(null)
+  const [prevLockedTape, setPrevLockedTape] = useState(lockedTape)
+  if (lockedTape !== prevLockedTape) {
+    setPrevLockedTape(lockedTape)
+    setExportError(null)
+  }
 
   const isLocked = lockedTape !== null
 
@@ -56,10 +67,12 @@ export function TapeCreatorPanel({
   }
 
   const handleReset = () => {
+    onTapeReset?.()
     setLockedTape(null)
     setWarningText('')
     setTapeColor(DEFAULT_TAPE_COLOR)
     setExportError(null)
+    clearCreateFlowDraft()
   }
 
   const handleSaveTape = async () => {
@@ -78,8 +91,8 @@ export function TapeCreatorPanel({
   }, [lockedTape, onLockedTapeChange])
 
   useEffect(() => {
-    setExportError(null)
-  }, [lockedTape])
+    mergeCreateFlowDraft({ warningText, tapeColor, lockedTape })
+  }, [warningText, tapeColor, lockedTape])
 
   return (
     <div className={`flex flex-col gap-8 ${className}`}>

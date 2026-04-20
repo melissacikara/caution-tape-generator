@@ -3,8 +3,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { z } from 'https://esm.sh/zod@3.23.8'
 
 import { extractUserId } from '../_shared/auth.ts'
-import { corsHeaders } from '../_shared/cors.ts'
-import { jsonError, jsonOk } from '../_shared/errors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { jsonDatabaseError, jsonError, jsonOk } from '../_shared/errors.ts'
+import { orphanClaimDecision } from '../_shared/orphanClaim.ts'
+import { sameUuid } from '../_shared/uuid.ts'
 import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
@@ -13,33 +15,33 @@ const bodySchema = z.object({
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: getCorsHeaders(req) })
   }
   if (req.method !== 'POST') {
-    return jsonError('METHOD_NOT_ALLOWED', 'Use POST', 405)
+    return jsonError(req, 'METHOD_NOT_ALLOWED', 'Use POST', 405)
   }
 
   let raw: unknown
   try {
     raw = await req.json()
   } catch {
-    return jsonError('BAD_REQUEST', 'Invalid JSON body', 400)
+    return jsonError(req, 'BAD_REQUEST', 'Invalid JSON body', 400)
   }
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
+    return jsonError(req, 'VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
   const userId = await extractUserId(req)
   if (!userId) {
-    return jsonError('UNAUTHORIZED', 'Login required', 401)
+    return jsonError(req, 'UNAUTHORIZED', 'Login required', 401)
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !key) {
-    return jsonError('SERVER_CONFIG', 'Missing Supabase env', 500)
+    return jsonError(req, 'SERVER_CONFIG', 'Missing Supabase env', 500)
   }
 
   const supabase = createClient(supabaseUrl, key)
@@ -52,33 +54,47 @@ serve(async (req) => {
     .maybeSingle()
 
   if (sErr) {
-    return jsonError('DATABASE_ERROR', sErr.message, 500)
+    return jsonDatabaseError(req, sErr)
   }
   if (!scenario) {
-    return jsonError('NOT_FOUND', 'Scenario not found', 404)
+    return jsonError(req, 'NOT_FOUND', 'Scenario not found', 404)
   }
 
   if (scenario.is_public) {
-    return jsonError(
+    return jsonError(req, 
       'FORBIDDEN',
       'Public scenarios cannot be deleted. Make it private first to regain delete rights.',
       403,
     )
   }
 
-  if (userId !== scenario.owner_id) {
-    return jsonError('FORBIDDEN', 'You do not have permission to modify this scenario', 403)
+  let mayDelete = false
+  if (scenario.owner_id) {
+    mayDelete = sameUuid(userId, scenario.owner_id as string)
+  } else {
+    const decision = await orphanClaimDecision(supabase, scenario.id as string, userId)
+    if (decision === 'claim') {
+      mayDelete = true
+    } else if (decision === 'unattributed') {
+      return jsonError(req, 
+        'NO_OWNER',
+        'This scenario has no owner and only anonymous tapes. Remove tapes in SQL or contact support to delete.',
+        409,
+      )
+    } else {
+      mayDelete = false
+    }
   }
 
-  const { error: dErr } = await supabase
-    .from('scenarios')
-    .delete()
-    .eq('id', scenario.id)
-    .eq('is_public', false)
+  if (!mayDelete) {
+    return jsonError(req, 'FORBIDDEN', 'You do not have permission to modify this scenario', 403)
+  }
+
+  const { error: dErr } = await supabase.from('scenarios').delete().eq('id', scenario.id)
 
   if (dErr) {
-    return jsonError('DATABASE_ERROR', dErr.message, 500)
+    return jsonDatabaseError(req, dErr)
   }
 
-  return jsonOk({ ok: true })
+  return jsonOk(req, { ok: true })
 })

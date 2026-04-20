@@ -33,6 +33,11 @@ export type GetScenarioResponse = {
   tapes: TapeDto[]
   /** Present when the request was authenticated; whether this user follows this scenario. */
   viewerFollowsScenario?: boolean
+  /**
+   * Present when authenticated. True if this user is the DB owner or may claim an orphan
+   * (same rules as delete / visibility). Use for header actions instead of comparing ownerId only.
+   */
+  viewerIsScenarioOwner?: boolean
 }
 
 export type AddTapeBody = {

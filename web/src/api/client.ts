@@ -51,10 +51,21 @@ function supabaseFunctionUrl(functionName: string): string {
   return `${base}/functions/v1/${functionName}`
 }
 
+/** Fresh JWT for Edge Functions (same pattern for POST and GET). */
+async function getBearerTokenForEdgeFunctions(): Promise<string> {
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
+  await supabaseClient.auth.getUser()
+  let { data: { session } } = await supabaseClient.auth.getSession()
+  if (!session) {
+    const { data } = await supabaseClient.auth.refreshSession()
+    session = data.session ?? null
+  }
+  return session?.access_token ?? anon
+}
+
 async function supabaseFetch(path: string, init: RequestInit): Promise<Response> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
 
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body) {
@@ -98,8 +109,7 @@ export async function getScenarioBySlug(slug: string): Promise<GetScenarioRespon
   const url = new URL(supabaseFunctionUrl('get-scenario-by-slug'))
   url.searchParams.set('slug', slug)
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(url.toString(), {
     method: 'GET',
     headers: {
@@ -178,8 +188,7 @@ export async function reportTape(body: ReportTapeBody): Promise<ReportTapeRespon
 
 export async function listPublicScenarios(): Promise<ListScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-public-scenarios'), {
     method: 'GET',
     headers: {
@@ -192,8 +201,7 @@ export async function listPublicScenarios(): Promise<ListScenariosResponse> {
 
 export async function listMyScenarios(): Promise<ListScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-my-scenarios'), {
     method: 'GET',
     headers: {
@@ -206,8 +214,7 @@ export async function listMyScenarios(): Promise<ListScenariosResponse> {
 
 export async function listInvitedScenarios(): Promise<ListScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-invited-scenarios'), {
     method: 'GET',
     headers: {
@@ -220,8 +227,7 @@ export async function listInvitedScenarios(): Promise<ListScenariosResponse> {
 
 export async function listFollowedScenarios(): Promise<ListScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-followed-scenarios'), {
     method: 'GET',
     headers: {
@@ -234,8 +240,7 @@ export async function listFollowedScenarios(): Promise<ListScenariosResponse> {
 
 export async function listUnreadScenarios(): Promise<ListUnreadScenariosResponse> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const { data: { session } } = await supabaseClient.auth.getSession()
-  const token = session?.access_token ?? anon
+  const token = await getBearerTokenForEdgeFunctions()
   const res = await fetch(supabaseFunctionUrl('list-unread-scenarios'), {
     method: 'GET',
     headers: {

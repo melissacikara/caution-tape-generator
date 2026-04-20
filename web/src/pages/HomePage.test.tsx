@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // ── Module mocks ─────────────────────────────────────────────────────────────
 // vi.mock calls are hoisted above imports by Vitest — all vi.fn() are fresh mocks
 
-vi.mock('../providers/AuthProvider', () => ({
+vi.mock('../providers/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'u1', email: 'test@example.com' },
     session: null,

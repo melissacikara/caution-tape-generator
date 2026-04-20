@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { LoginModal } from './LoginModal'
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '../providers/useAuth'
 
 /**
  * UX-DR6: slim header — wordmark (Bebas / accent) left, nav right.
- * Wordmark and Create link go to /create; About stays on /about; / still redirects to /about.
+ * Wordmark and Create link go to / (tape creator); About stays on /about.
  */
 export function AppHeader() {
   const { user, loading, signOut } = useAuth()
@@ -17,14 +17,14 @@ export function AppHeader() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
         <div className="mx-auto flex h-[52px] w-full max-w-[480px] items-center justify-between gap-4 px-4 md:max-w-[640px] md:px-6">
           <Link
-            to="/create"
+            to="/"
             className="min-w-0 flex-1 truncate font-display text-base uppercase tracking-[0.12em] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             ⚠ Caution Tape Generator
           </Link>
           <nav aria-label="Main" className="flex shrink-0 items-center gap-3 md:gap-5">
             <Link
-              to="/create"
+              to="/"
               className="font-ui text-sm text-muted underline-offset-4 transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Create

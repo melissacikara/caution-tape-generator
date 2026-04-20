@@ -8,6 +8,10 @@ interface LoginModalProps {
 
 type ModalState = 'idle' | 'sending' | 'link_sent' | 'error'
 
+/** Avoid leaking whether an email is registered (Supabase error strings vary). */
+const OTP_ERROR_GENERIC =
+  "If this address can receive mail from us, you'll get a sign-in link shortly. Check your inbox and spam folder."
+
 export function LoginModal({ onClose }: LoginModalProps) {
   const [email, setEmail] = useState('')
   const [modalState, setModalState] = useState<ModalState>('idle')
@@ -16,6 +20,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const emailRef = useRef<HTMLInputElement>(null)
   const linkSentPrimaryRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
     emailRef.current?.focus()
@@ -35,6 +40,12 @@ export function LoginModal({ onClose }: LoginModalProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim()) return
@@ -52,8 +63,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
       },
     })
 
+    if (!mountedRef.current) return
+
     if (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(OTP_ERROR_GENERIC)
       setModalState('error')
     } else {
       setModalState('link_sent')
@@ -73,8 +86,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       },
     })
     setResendBusy(false)
+    if (!mountedRef.current) return
     if (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(OTP_ERROR_GENERIC)
     }
   }
 

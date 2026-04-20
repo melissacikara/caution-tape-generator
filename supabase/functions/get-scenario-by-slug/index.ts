@@ -2,22 +2,24 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 import { extractUserId } from '../_shared/auth.ts'
-import { corsHeaders } from '../_shared/cors.ts'
-import { jsonError, jsonOk } from '../_shared/errors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { jsonDatabaseError, jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapScenario, mapTape } from '../_shared/map.ts'
+import { orphanClaimDecision } from '../_shared/orphanClaim.ts'
+import { sameUuid } from '../_shared/uuid.ts'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: getCorsHeaders(req) })
   }
   if (req.method !== 'GET') {
-    return jsonError('METHOD_NOT_ALLOWED', 'Use GET', 405)
+    return jsonError(req, 'METHOD_NOT_ALLOWED', 'Use GET', 405)
   }
 
   const url = new URL(req.url)
   const slug = url.searchParams.get('slug')?.trim()
   if (!slug) {
-    return jsonError('BAD_REQUEST', 'Query parameter slug is required', 400)
+    return jsonError(req, 'BAD_REQUEST', 'Query parameter slug is required', 400)
   }
 
   const userId = await extractUserId(req)
@@ -25,7 +27,7 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !key) {
-    return jsonError('SERVER_CONFIG', 'Missing Supabase env', 500)
+    return jsonError(req, 'SERVER_CONFIG', 'Missing Supabase env', 500)
   }
 
   const supabase = createClient(supabaseUrl, key)
@@ -37,10 +39,10 @@ serve(async (req) => {
     .maybeSingle()
 
   if (sErr) {
-    return jsonError('DATABASE_ERROR', sErr.message, 500)
+    return jsonDatabaseError(req, sErr)
   }
   if (!scenario) {
-    return jsonError('NOT_FOUND', 'Scenario not found', 404)
+    return jsonError(req, 'NOT_FOUND', 'Scenario not found', 404)
   }
 
   // Best-effort invite tracking: record that this logged-in non-owner opened a private board.
@@ -63,10 +65,11 @@ serve(async (req) => {
     .order('created_at', { ascending: false })
 
   if (tErr) {
-    return jsonError('DATABASE_ERROR', tErr.message, 500)
+    return jsonDatabaseError(req, tErr)
   }
 
   let viewerFollowsScenario = false
+  let viewerIsScenarioOwner = false
   if (userId) {
     const { data: followRow, error: foErr } = await supabase
       .from('scenario_follows')
@@ -76,14 +79,23 @@ serve(async (req) => {
       .maybeSingle()
 
     if (foErr) {
-      return jsonError('DATABASE_ERROR', foErr.message, 500)
+      return jsonDatabaseError(req, foErr)
     }
     viewerFollowsScenario = followRow !== null
+
+    if (scenario.owner_id) {
+      viewerIsScenarioOwner = sameUuid(userId, scenario.owner_id as string)
+    } else {
+      const decision = await orphanClaimDecision(supabase, scenario.id as string, userId)
+      viewerIsScenarioOwner = decision === 'claim'
+    }
   }
 
-  return jsonOk({
+  return jsonOk(req, {
     scenario: mapScenario(scenario),
     tapes: (tapeRows ?? []).map(mapTape),
-    ...(userId ? { viewerFollowsScenario } : {}),
+    ...(userId
+      ? { viewerFollowsScenario, viewerIsScenarioOwner }
+      : {}),
   })
 })

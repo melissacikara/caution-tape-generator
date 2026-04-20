@@ -129,7 +129,7 @@ export function AboutPage() {
             The tape does not make itself.
           </p>
           <Link
-            to="/create"
+            to="/"
             className="mt-4 inline-flex min-h-[44px] items-center justify-center border border-accent bg-transparent px-5 py-2.5 font-ui text-sm font-medium uppercase tracking-wide text-accent transition-colors hover:bg-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Start taping

@@ -59,7 +59,7 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
 }))
 
-vi.mock('../providers/AuthProvider', () => ({
+vi.mock('../providers/useAuth', () => ({
   useAuth: () => ({
     user: authStub.state.user,
     loading: authStub.state.loading,
@@ -285,7 +285,7 @@ describe('LibraryPage', () => {
 
       expect(screen.getByRole('heading', { name: /^my scenarios$/i })).toBeInTheDocument()
       expect(screen.getByText(/you haven't created any scenarios yet/i)).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /create your own/i })).toHaveAttribute('href', '/create')
+      expect(screen.getByRole('link', { name: /create your own/i })).toHaveAttribute('href', '/')
     })
 
     it('renders My Scenarios heading and card link when one owned scenario exists', async () => {

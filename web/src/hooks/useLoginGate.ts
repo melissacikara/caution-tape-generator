@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '../providers/useAuth'
 
 export function useLoginGate() {
   const { user, loading } = useAuth()

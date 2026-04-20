@@ -16,7 +16,7 @@ export function AuthCallbackPage() {
     function handleSuccess() {
       if (didNavigate.current) return
       didNavigate.current = true
-      void navigate('/create')
+      void navigate('/')
     }
 
     // Fallback: listen for SIGNED_IN in case getSession() resolves before the

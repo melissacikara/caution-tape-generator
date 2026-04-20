@@ -4,9 +4,10 @@ import { z } from 'https://esm.sh/zod@3.23.8'
 
 import { markUnreadForNewTape } from '../_shared/activityUnread.ts'
 import { extractUserId } from '../_shared/auth.ts'
-import { corsHeaders } from '../_shared/cors.ts'
-import { jsonError, jsonOk } from '../_shared/errors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { jsonDatabaseError, jsonError, jsonOk } from '../_shared/errors.ts'
 import { mapTape } from '../_shared/map.ts'
+import { rateLimitOr429 } from '../_shared/rateLimit.ts'
 import { formatZodError } from '../_shared/zod.ts'
 
 const bodySchema = z.object({
@@ -18,22 +19,22 @@ const bodySchema = z.object({
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: getCorsHeaders(req) })
   }
   if (req.method !== 'POST') {
-    return jsonError('METHOD_NOT_ALLOWED', 'Use POST', 405)
+    return jsonError(req, 'METHOD_NOT_ALLOWED', 'Use POST', 405)
   }
 
   let raw: unknown
   try {
     raw = await req.json()
   } catch {
-    return jsonError('BAD_REQUEST', 'Invalid JSON body', 400)
+    return jsonError(req, 'BAD_REQUEST', 'Invalid JSON body', 400)
   }
 
   const parsed = bodySchema.safeParse(raw)
   if (!parsed.success) {
-    return jsonError('VALIDATION_ERROR', formatZodError(parsed.error), 400)
+    return jsonError(req, 'VALIDATION_ERROR', formatZodError(parsed.error), 400)
   }
 
   const userId = await extractUserId(req)
@@ -41,8 +42,14 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !key) {
-    return jsonError('SERVER_CONFIG', 'Missing Supabase env', 500)
+    return jsonError(req, 'SERVER_CONFIG', 'Missing Supabase env', 500)
   }
+
+  const limited = rateLimitOr429(req, userId, 'add-tape', {
+    max: 60,
+    windowMs: 60_000,
+  })
+  if (limited) return limited
 
   const supabase = createClient(supabaseUrl, key)
   const { scenarioSlug, tapeText, color, idempotencyKey } = parsed.data
@@ -54,14 +61,14 @@ serve(async (req) => {
     .maybeSingle()
 
   if (sErr) {
-    return jsonError('DATABASE_ERROR', sErr.message, 500)
+    return jsonDatabaseError(req, sErr)
   }
   if (!scenario) {
-    return jsonError('NOT_FOUND', 'Scenario not found', 404)
+    return jsonError(req, 'NOT_FOUND', 'Scenario not found', 404)
   }
   // Public scenarios require auth; private/unlisted scenarios allow anonymous adds (link = invitation)
   if (!userId && scenario.is_public) {
-    return jsonError('UNAUTHORIZED', 'Login required to add tapes to a public scenario', 401)
+    return jsonError(req, 'UNAUTHORIZED', 'Login required to add tapes to a public scenario', 401)
   }
 
   if (idempotencyKey) {
@@ -79,7 +86,7 @@ serve(async (req) => {
         .eq('id', existing.tape_id)
         .single()
       if (!te && tape) {
-        return jsonOk({ tape: mapTape(tape), idempotent: true })
+        return jsonOk(req, { tape: mapTape(tape), idempotent: true })
       }
     }
   }
@@ -96,7 +103,7 @@ serve(async (req) => {
     .single()
 
   if (tErr || !tape) {
-    return jsonError('DATABASE_ERROR', tErr?.message ?? 'Insert failed', 500)
+    return jsonDatabaseError(req, tErr ?? new Error('Tape insert failed'))
   }
 
   if (idempotencyKey) {
@@ -117,5 +124,5 @@ serve(async (req) => {
     tapeCreatedAt: tape.created_at as string,
   })
 
-  return jsonOk({ tape: mapTape(tape), idempotent: false })
+  return jsonOk(req, { tape: mapTape(tape), idempotent: false })
 })

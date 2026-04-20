@@ -32,8 +32,8 @@ export const router = createBrowserRouter([
   {
     element: <AppLayout />,
     children: [
-      { path: '/', element: <Navigate to="/about" replace /> },
-      { path: '/create', element: <HomePage /> },
+      { path: '/', element: <HomePage /> },
+      { path: '/create', element: <Navigate to="/" replace /> },
       { path: '/library', element: <LibraryPage /> },
       { path: '/about', element: <AboutPage /> },
       { path: '/auth/callback', element: <AuthCallbackPage /> },

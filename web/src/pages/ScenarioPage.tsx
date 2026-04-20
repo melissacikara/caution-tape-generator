@@ -24,7 +24,7 @@ import { LoginModal } from '../components/LoginModal'
 import { useLoginGate } from '../hooks/useLoginGate'
 import { copyTextToClipboard } from '../lib/copyToClipboard'
 import { forgetScenarioSlug, rememberScenarioSlug } from '../lib/knownScenarios'
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '../providers/useAuth'
 import { ColorPickerSwatch } from '../tape/ColorPickerSwatch'
 import { TapeRenderer } from '../tape/TapeRenderer'
 
@@ -92,6 +92,11 @@ export function ScenarioPage() {
   const [reportedTapeIds, setReportedTapeIds] = useState<Set<string>>(() => new Set())
   const [reportingTapeId, setReportingTapeId] = useState<string | null>(null)
   const [showFollowPrompt, setShowFollowPrompt] = useState(false)
+  const [followPromptSlug, setFollowPromptSlug] = useState(slug)
+  if (slug !== followPromptSlug) {
+    setFollowPromptSlug(slug)
+    setShowFollowPrompt(false)
+  }
 
   const deferredEditText = useDeferredValue(editText)
   const deferredNewText = useDeferredValue(newText)
@@ -103,10 +108,6 @@ export function ScenarioPage() {
 
   useEffect(() => {
     if (slug) rememberScenarioSlug(slug)
-  }, [slug])
-
-  useEffect(() => {
-    setShowFollowPrompt(false)
   }, [slug])
 
   /** Move focus into the creator textarea when add or edit panel opens. */
@@ -196,9 +197,13 @@ export function ScenarioPage() {
       setAddOpen(false)
       if (!user || !slug) return
       const snapshot = queryClient.getQueryData<GetScenarioResponse>(scenarioKeys.bySlug(slug))
+      const viewerOwnsScenario =
+        snapshot?.viewerIsScenarioOwner === true ||
+        (snapshot?.viewerIsScenarioOwner === undefined &&
+          snapshot?.scenario.ownerId === user.id)
       if (
         snapshot?.scenario.isPublic === true &&
-        snapshot.scenario.ownerId !== user.id &&
+        !viewerOwnsScenario &&
         snapshot.viewerFollowsScenario !== true &&
         !isFollowPromptDismissed(snapshot.scenario.id)
       ) {
@@ -335,7 +340,7 @@ export function ScenarioPage() {
     onSuccess: () => {
       if (slug) forgetScenarioSlug(slug)
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
-      navigate('/create', { state: { library: true } })
+      navigate('/', { state: { library: true } })
     },
   })
 
@@ -545,10 +550,16 @@ export function ScenarioPage() {
 
   const { scenario, tapes } = data
 
-  const isScenarioOwner = user !== null && !!scenario && user.id === scenario.ownerId
+  const isScenarioOwner =
+    user !== null &&
+    !!scenario &&
+    (data.viewerIsScenarioOwner === true ||
+      (data.viewerIsScenarioOwner === undefined &&
+        scenario.ownerId !== undefined &&
+        user.id === scenario.ownerId))
 
   const canEditTape = (tape: TapeDto) =>
-    user !== null && !!scenario && (user.id === scenario.ownerId || user.id === tape.authorId)
+    user !== null && !!scenario && (isScenarioOwner || user.id === tape.authorId)
 
   const addErr =
     addMutation.error instanceof ApiError
@@ -685,6 +696,12 @@ export function ScenarioPage() {
               </div>
             </div>
           )}
+          {isScenarioOwner && scenario.isPublic ? (
+            <p className="mt-2 max-w-md font-ui text-xs text-muted">
+              To delete this board, use <span className="text-foreground">Make Private</span> first — then
+              the Delete control appears.
+            </p>
+          ) : null}
           <p className="mt-1 font-ui text-xs text-muted">
             {tapes.length} tape{tapes.length === 1 ? '' : 's'}
             {' · '}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { startTransition, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 import { ApiError, addTape, createScenario, isSupabaseConfigured, listScenarios } from '../api/client'
@@ -7,8 +7,9 @@ import { scenarioKeys } from '../api/queryKeys'
 import { LoginModal } from '../components/LoginModal'
 import { ScenarioLibrary } from '../components/ScenarioLibrary'
 import { useLoginGate } from '../hooks/useLoginGate'
+import { clearCreateFlowDraft, loadCreateFlowDraft, mergeCreateFlowDraft } from '../lib/createFlowStorage'
 import { getKnownScenarioSlugs, rememberScenarioSlug } from '../lib/knownScenarios'
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '../providers/useAuth'
 import { TapeCreatorPanel } from '../tape'
 
 type HomeLocationState = { library?: boolean; home?: boolean }
@@ -38,7 +39,7 @@ export function HomePage() {
     })
   }, [location.state, location.pathname, navigate])
 
-  const [scenarioName, setScenarioName] = useState('')
+  const [scenarioName, setScenarioName] = useState(() => loadCreateFlowDraft().scenarioName)
   const [lockedForScenario, setLockedForScenario] = useState<{
     text: string
     color: string
@@ -51,26 +52,11 @@ export function HomePage() {
    * Also rotated when the target scenario changes (same tape, different destination = new session).
    */
   const [addExistingIdempotencyKey, setAddExistingIdempotencyKey] = useState<string | null>(null)
-  const prevLockedRef = useRef<{ text: string; color: string } | null>(null)
   /** When you already have scenarios on this device: add locked tape to one of them vs create new. */
-  const [tapeDestination, setTapeDestination] = useState<'new' | 'existing'>('new')
-  const [selectedSlug, setSelectedSlug] = useState('')
-
-  /** Generate a fresh idempotency key when a tape is locked; clear it when unlocked. */
-  useEffect(() => {
-    const prev = prevLockedRef.current
-    const textChanged = lockedForScenario?.text !== prev?.text
-    const colorChanged = lockedForScenario?.color !== prev?.color
-    prevLockedRef.current = lockedForScenario
-
-    if (!lockedForScenario) {
-      setAddExistingIdempotencyKey(null)
-    } else if (!prev || textChanged || colorChanged) {
-      // New tape or tape content changed → new add session → new key
-      setAddExistingIdempotencyKey(crypto.randomUUID())
-    }
-    // If lockedForScenario is the same object reference (no content change), keep existing key
-  }, [lockedForScenario])
+  const [tapeDestination, setTapeDestination] = useState<'new' | 'existing'>(
+    () => loadCreateFlowDraft().tapeDestination,
+  )
+  const [selectedSlug, setSelectedSlug] = useState(() => loadCreateFlowDraft().selectedSlug)
 
   const handleLockedTapeChange = useCallback(
     (tape: { text: string; color: string } | null) => {
@@ -79,6 +65,16 @@ export function HomePage() {
     },
     [],
   )
+
+  const handleTapePanelReset = useCallback(() => {
+    setScenarioName('')
+    setTapeDestination('new')
+    setSelectedSlug('')
+  }, [])
+
+  useEffect(() => {
+    mergeCreateFlowDraft({ scenarioName, tapeDestination, selectedSlug })
+  }, [scenarioName, tapeDestination, selectedSlug])
 
   const listSortedKey = [...knownSlugs].sort().join(',')
 
@@ -100,10 +96,26 @@ export function HomePage() {
     return rows[0]?.scenario.publicSlug ?? ''
   }, [scenarioRows, selectedSlug])
 
-  /** Rotate the key when the target scenario changes — same tape, new destination = new add session. */
-  useEffect(() => {
+  const normLock =
+    lockedForScenario !== null
+      ? `${lockedForScenario.text}\0${lockedForScenario.color}`
+      : null
+  const [prevNormLock, setPrevNormLock] = useState<string | null>(null)
+  const [prevExistingSelect, setPrevExistingSelect] = useState(existingSelectValue)
+
+  if (normLock === null) {
+    if (prevNormLock !== null) {
+      setPrevNormLock(null)
+      setAddExistingIdempotencyKey(null)
+    }
+  } else if (normLock !== prevNormLock) {
+    setPrevNormLock(normLock)
+    setAddExistingIdempotencyKey(crypto.randomUUID())
+    setPrevExistingSelect(existingSelectValue)
+  } else if (existingSelectValue !== prevExistingSelect) {
+    setPrevExistingSelect(existingSelectValue)
     setAddExistingIdempotencyKey((prev) => (prev !== null ? crypto.randomUUID() : null))
-  }, [existingSelectValue])
+  }
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -117,6 +129,7 @@ export function HomePage() {
       })
     },
     onSuccess: (data) => {
+      clearCreateFlowDraft()
       rememberScenarioSlug(data.scenario.publicSlug)
       setKnownSlugs(getKnownScenarioSlugs())
       void queryClient.invalidateQueries({ queryKey: scenarioKeys.all })
@@ -141,6 +154,7 @@ export function HomePage() {
       })
     },
     onSuccess: (_, { scenarioSlug }) => {
+      clearCreateFlowDraft()
       setAddExistingIdempotencyKey(null)
       rememberScenarioSlug(scenarioSlug)
       setKnownSlugs(getKnownScenarioSlugs())
@@ -208,7 +222,10 @@ export function HomePage() {
 
         {showCreateFlow ? (
           <div>
-            <TapeCreatorPanel onLockedTapeChange={handleLockedTapeChange} />
+            <TapeCreatorPanel
+              onLockedTapeChange={handleLockedTapeChange}
+              onTapeReset={handleTapePanelReset}
+            />
 
             {lockedForScenario ? (
               <section

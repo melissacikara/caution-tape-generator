@@ -1,5 +1,5 @@
 # generated: 2026-04-10
-# last_updated: 2026-04-15 (Epic 7 stories 7-1–7-4 done)
+# last_updated: 2026-04-20 (Phase 2 consolidated retro; all epic retros done)
 # project: caution-bmad
 # project_key: NOKEY
 # tracking_system: file-system
@@ -36,9 +36,9 @@
 
 # PHASE 2 SPRINT — active branch: phase2
 # Phase 1 stories (pre-epic-1 baseline) are SHIPPED — do not re-implement.
-# Epic 7 complete (2026-04-15). Phase 2 epic backlog: verify deploy + any follow-up from brainstorming.
+# Phase 2 epics 1–7 done. Consolidated retro 2026-04-20. Next: deploy/merge hygiene + product triage (see phase-2-consolidated-retro-2026-04-20.md).
 generated: "2026-04-10"
-last_updated: "2026-04-15"  # Epic 7 complete
+last_updated: "2026-04-20"
 project: caution-bmad
 project_key: NOKEY
 tracking_system: file-system
@@ -52,7 +52,7 @@ development_status:
   1-2-magic-link-login-flow: done
   1-3-login-gate-on-tape-and-scenario-creation: done
   1-4-context-aware-ctas: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # ─── Epic 2: Ownership, Privacy & Public Safety ──────────────────────────────
   # Depends on Epic 1.
@@ -62,7 +62,7 @@ development_status:
   2-3-public-private-toggle: done
   2-4-public-scenario-permissions: done
   2-5-report-tape-and-persistent-footer: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   # ─── Epic 3: About Page & Front Door ─────────────────────────────────────────
   # Lightweight — can ship early; copy dependency noted in epics.
@@ -70,7 +70,7 @@ development_status:
   3-1-about-page-content-and-layout: done
   3-2-homepage-route-serves-about-page: done
   3-3-navigation-header-update: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # ─── Epic 4: Polished, resilient, inclusive experience ─────────────────────────
   # Per epics.md — FR26 + cross-cutting quality. Depends on Epics 1 + 2 (done).
@@ -80,7 +80,7 @@ development_status:
   4-3-reliability-hardening-for-flaky-networks-and-mutation-failures: done
   4-4-accessibility-audit-and-fixes-to-wcag-2-1-aa-baseline: done
   4-5-security-and-abuse-posture-review-for-anonymous-sharing: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # ─── Epic 5: Library Redesign — two-tab public and private ──────────────────
   # Depends on Epics 1 + 2. Public tab (community feed) + Private tab (3 buckets).
@@ -90,7 +90,7 @@ development_status:
   5-3-private-tab-my-scenarios-bucket: done
   5-4-private-tab-invited-bucket: done
   5-5-private-tab-following-bucket: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   # ─── Epic 6: Tape Creation Improvements ──────────────────────────────────────
   # Fully standalone — no dependencies, shipped in parallel with Epics 1–3.
@@ -99,7 +99,7 @@ development_status:
   6-2-unified-color-preset-swatches: done
   6-3-long-tape-text-support: done
   6-4-save-tape-to-camera-roll: done
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
 
   # ─── Epic 7: Notifications and following ─────────────────────────────────────
   # Depends on Epics 1 + 5 (Following bucket must exist in library first).
@@ -108,4 +108,4 @@ development_status:
   7-2-quiet-badge-on-scenario-cards: done
   7-3-follow-and-unfollow-a-public-scenario: done
   7-4-opportunistic-follow-prompt: done
-  epic-7-retrospective: optional
+  epic-7-retrospective: done

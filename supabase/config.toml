@@ -39,3 +39,18 @@ verify_jwt = false
 
 [functions.unfollow-scenario]
 verify_jwt = false
+
+[functions.toggle-scenario-visibility]
+verify_jwt = false
+
+[functions.list-public-scenarios]
+verify_jwt = false
+
+[functions.delete-scenario]
+verify_jwt = false
+
+[functions.update-scenario]
+verify_jwt = false
+
+[functions.report-tape]
+verify_jwt = false

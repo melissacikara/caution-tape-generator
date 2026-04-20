@@ -18,7 +18,7 @@ const authStub = vi.hoisted(() => {
   }
 })
 
-vi.mock('../providers/AuthProvider', () => ({
+vi.mock('../providers/useAuth', () => ({
   useAuth: () => ({
     user: authStub.state.user,
     session: authStub.state.session,
@@ -51,16 +51,16 @@ describe('AppHeader', () => {
     authStub.state.loading = false
   })
 
-  it('renders the logo link pointing to /create', () => {
+  it('renders the logo link pointing to /', () => {
     renderHeader()
     const logo = screen.getByRole('link', { name: /caution tape generator/i })
     expect(logo).toBeInTheDocument()
-    expect(logo).toHaveAttribute('href', '/create')
+    expect(logo).toHaveAttribute('href', '/')
   })
 
-  it('renders the Create nav link pointing to /create', () => {
+  it('renders the Create nav link pointing to /', () => {
     renderHeader()
-    expect(screen.getByRole('link', { name: /^create$/i })).toHaveAttribute('href', '/create')
+    expect(screen.getByRole('link', { name: /^create$/i })).toHaveAttribute('href', '/')
   })
 
   it('logo link carries responsive flex classes (flex-1 min-w-0 truncate) to prevent narrow-viewport overflow', () => {
