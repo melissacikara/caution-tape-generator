@@ -1,4 +1,4 @@
-import { Component, ReactNode, Suspense } from 'react'
+import { Component, Suspense, type ReactNode } from 'react'
 import { Outlet } from 'react-router'
 
 import { AppFooter } from '../components/AppFooter'

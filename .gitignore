@@ -21,11 +21,26 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Vercel (linked project metadata — regenerate with `vercel link`)
+.vercel/
+
 # Playwright
 /test-results/
+/tests/e2e/.auth/user.json
+
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Claude Code local overrides
+.claude/settings.local.json
+
+# Supabase one-off MCP / debug payloads (not tracked source)
+supabase/_*.json
+supabase/mcp-payload*.json
+supabase/mcp-deploy*.mjs
+supabase/mcp-stdout*.txt
+supabase/payload-raw.txt
 
 # Logs
 *.log

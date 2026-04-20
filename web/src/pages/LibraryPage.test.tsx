@@ -145,21 +145,21 @@ describe('LibraryPage', () => {
     vi.mocked(useQuery).mockImplementation((options: { queryKey: readonly unknown[] }) => {
       const key = options.queryKey
       if (Array.isArray(key) && key.includes('public-feed')) {
-        return { ...queryStubs.public } as ReturnType<typeof useQuery>
+        return { ...queryStubs.public } as unknown as ReturnType<typeof useQuery>
       }
       if (Array.isArray(key) && key.includes('mine')) {
-        return { ...queryStubs.mine } as ReturnType<typeof useQuery>
+        return { ...queryStubs.mine } as unknown as ReturnType<typeof useQuery>
       }
       if (Array.isArray(key) && key.includes('invited')) {
-        return { ...queryStubs.invited } as ReturnType<typeof useQuery>
+        return { ...queryStubs.invited } as unknown as ReturnType<typeof useQuery>
       }
       if (Array.isArray(key) && key.includes('following')) {
-        return { ...queryStubs.following } as ReturnType<typeof useQuery>
+        return { ...queryStubs.following } as unknown as ReturnType<typeof useQuery>
       }
       if (Array.isArray(key) && key.includes('unread')) {
-        return { ...queryStubs.unread } as ReturnType<typeof useQuery>
+        return { ...queryStubs.unread } as unknown as ReturnType<typeof useQuery>
       }
-      return { ...queryStubs.public } as ReturnType<typeof useQuery>
+      return { ...queryStubs.public } as unknown as ReturnType<typeof useQuery>
     })
   })
 

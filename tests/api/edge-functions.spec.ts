@@ -5,7 +5,10 @@ import {
   authHeaders,
   fnUrl,
   getSupabaseEnv,
+  getUserAccessToken,
+  hasE2EUserCredentials,
   readJson,
+  userAuthHeaders,
   type ApiErrorBody,
 } from './helpers'
 
@@ -17,12 +20,24 @@ describe.skipIf(!configured)(
     const base = url
 
     test('create-scenario → get-scenario-by-slug → list-scenarios → add-tape → update-tape → delete-tape', async () => {
+      const accessToken = await getUserAccessToken()
+      if (hasE2EUserCredentials() && accessToken === null) {
+        throw new Error(
+          'E2E_LOGIN_EMAIL / E2E_LOGIN_PASSWORD are set but signInWithPassword failed — check Supabase Auth and test user.',
+        )
+      }
+
+      const jsonHeaders =
+        accessToken !== null ? userAuthHeaders(anon, accessToken) : authHeaders(anon)
+      const getHeaders =
+        accessToken !== null ? userAuthHeaders(anon, accessToken, false) : authHeaders(anon, false)
+
       const stamp = `${Date.now()}-${randomUUID().slice(0, 8)}`
       const scenarioName = `API test ${stamp}`
 
       const createRes = await fetch(fnUrl(base, 'create-scenario'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: jsonHeaders,
         body: JSON.stringify({
           name: scenarioName,
           firstTape: { tapeText: `first ${stamp}`, color: '#FFD000' },
@@ -39,7 +54,7 @@ describe.skipIf(!configured)(
 
       const getRes = await fetch(
         `${fnUrl(base, 'get-scenario-by-slug')}?slug=${encodeURIComponent(slug)}`,
-        { method: 'GET', headers: authHeaders(anon, false) },
+        { method: 'GET', headers: getHeaders },
       )
       expect(getRes.status).toBe(200)
       const got = await readJson<typeof created>(getRes)
@@ -48,7 +63,7 @@ describe.skipIf(!configured)(
 
       const listRes = await fetch(fnUrl(base, 'list-scenarios'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: jsonHeaders,
         body: JSON.stringify({ slugs: [slug] }),
       })
       expect(listRes.status).toBe(200)
@@ -62,7 +77,7 @@ describe.skipIf(!configured)(
       const idem = randomUUID()
       const addRes = await fetch(fnUrl(base, 'add-tape'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: jsonHeaders,
         body: JSON.stringify({
           scenarioSlug: slug,
           tapeText: `second ${stamp}`,
@@ -80,7 +95,7 @@ describe.skipIf(!configured)(
 
       const addAgain = await fetch(fnUrl(base, 'add-tape'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: jsonHeaders,
         body: JSON.stringify({
           scenarioSlug: slug,
           tapeText: `second ${stamp}`,
@@ -95,14 +110,39 @@ describe.skipIf(!configured)(
 
       const afterAdd = await fetch(
         `${fnUrl(base, 'get-scenario-by-slug')}?slug=${encodeURIComponent(slug)}`,
-        { method: 'GET', headers: authHeaders(anon, false) },
+        { method: 'GET', headers: getHeaders },
       )
       const afterData = await readJson<typeof created>(afterAdd)
       expect(afterData.tapes).toHaveLength(2)
 
+      if (accessToken === null) {
+        const updAnon = await fetch(fnUrl(base, 'update-tape'), {
+          method: 'POST',
+          headers: authHeaders(anon),
+          body: JSON.stringify({
+            scenarioSlug: slug,
+            tapeId: secondTapeId,
+            tapeText: `updated ${stamp}`,
+            color: '#0000FF',
+          }),
+        })
+        expect(updAnon.status).toBe(401)
+        const delAnon = await fetch(fnUrl(base, 'delete-tape'), {
+          method: 'POST',
+          headers: authHeaders(anon),
+          body: JSON.stringify({
+            scenarioSlug: slug,
+            tapeId: secondTapeId,
+          }),
+        })
+        expect(delAnon.status).toBe(401)
+        return
+      }
+
+      const mutationHeaders = userAuthHeaders(anon, accessToken)
       const updRes = await fetch(fnUrl(base, 'update-tape'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: mutationHeaders,
         body: JSON.stringify({
           scenarioSlug: slug,
           tapeId: secondTapeId,
@@ -116,7 +156,7 @@ describe.skipIf(!configured)(
 
       const delRes = await fetch(fnUrl(base, 'delete-tape'), {
         method: 'POST',
-        headers: authHeaders(anon),
+        headers: mutationHeaders,
         body: JSON.stringify({
           scenarioSlug: slug,
           tapeId: secondTapeId,
@@ -128,7 +168,7 @@ describe.skipIf(!configured)(
 
       const finalGet = await fetch(
         `${fnUrl(base, 'get-scenario-by-slug')}?slug=${encodeURIComponent(slug)}`,
-        { method: 'GET', headers: authHeaders(anon, false) },
+        { method: 'GET', headers: getHeaders },
       )
       const finalData = await readJson<typeof created>(finalGet)
       expect(finalData.tapes).toHaveLength(1)

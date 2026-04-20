@@ -21,7 +21,9 @@ test.describe('Scenario tape flow', () => {
     ).toBeVisible()
 
     await page.getByRole('link', { name: 'Library' }).click()
-    await expect(page.getByRole('heading', { name: 'Your scenarios' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
+    await page.getByRole('tab', { name: /private/i }).click()
+    await expect(page.getByRole('heading', { name: /^my scenarios$/i })).toBeVisible()
 
     await page.getByRole('link').filter({ hasText: scenarioName }).click()
     await expect(page.getByRole('heading', { level: 1, name: scenarioName })).toBeVisible()

@@ -20,7 +20,9 @@ test.describe('FR15–FR21 scenario library and share URL', () => {
     })
 
     await page.getByRole('link', { name: 'Library' }).click()
-    await expect(page.getByRole('heading', { name: 'Your scenarios' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
+    await page.getByRole('tab', { name: /private/i }).click()
+    await expect(page.getByRole('heading', { name: /^my scenarios$/i })).toBeVisible()
     await expect(page.getByRole('list', { name: 'Scenario library' })).toBeVisible()
 
     const card = page.getByRole('link').filter({ hasText: scenarioName })
@@ -41,11 +43,12 @@ test.describe('FR15–FR21 scenario library and share URL', () => {
     })
 
     await page.getByRole('link', { name: 'Library' }).click()
-    await expect(page.getByRole('heading', { name: 'Your scenarios' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'New scenario' }).click()
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Create' }).click()
+    await expect(page).toHaveURL(/\/create/)
     await expect(page.getByRole('heading', { name: 'Warning Text' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Your scenarios' })).not.toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).not.toBeVisible()
   })
 
   test('FR19: Share URL field shows unique /s/:slug link for the scenario', async ({ page, context }) => {

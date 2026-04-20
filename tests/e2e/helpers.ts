@@ -8,15 +8,16 @@ export async function clearAppState(page: Page, context: BrowserContext): Promis
 }
 
 /**
- * Home flow: lock tape → create scenario → lands on `/s/:slug`.
+ * Create flow: `/create` (tape panel) → create scenario → lands on `/s/:slug`.
+ * `/` redirects to About — use `/create` for the tape UI.
  */
 export async function createScenarioViaUI(
   page: Page,
   opts: { scenarioName: string; firstTapeText: string },
 ): Promise<{ slug: string }> {
-  await page.goto('/')
+  await page.goto('/create')
   await page.getByLabel('Caution tape warning text').fill(opts.firstTapeText)
-  await page.getByRole('button', { name: 'Generate' }).click()
+  await page.getByRole('button', { name: /issue a warning/i }).click()
   await page.getByLabel('Scenario name').fill(opts.scenarioName)
   await page.getByRole('button', { name: 'Create scenario & open' }).click()
   await page.waitForURL(/\/s\/[a-z0-9-]+/i)
